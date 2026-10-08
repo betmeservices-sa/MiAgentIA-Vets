@@ -150,6 +150,24 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
           </p>
           <span className="ml-auto h-2 w-2 rounded-full bg-emerald-500" />
         </div>
+        <div className="mt-3">
+          <p className="mb-1.5 px-1 text-[10.5px] font-bold uppercase tracking-wider text-[var(--text-3)]">Ver como</p>
+          <div className="grid grid-cols-3 gap-1 rounded-xl bg-surface p-1">
+            {ROLES.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setRol(r.id)}
+                className={cn(
+                  "rounded-lg px-1 py-1.5 text-[11.5px] font-semibold transition",
+                  rol === r.id ? "bg-card text-[var(--text)] shadow-sm" : "text-[var(--text-3)] hover:text-[var(--text)]",
+                )}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
@@ -179,24 +197,6 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
       </nav>
 
       <div className="space-y-3 border-t border-line p-3">
-        <div>
-          <p className="mb-1.5 px-1 text-[10.5px] font-bold uppercase tracking-wider text-[var(--text-3)]">Ver como</p>
-          <div className="grid grid-cols-3 gap-1 rounded-xl bg-surface p-1">
-            {ROLES.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setRol(r.id)}
-                className={cn(
-                  "rounded-lg px-1 py-1.5 text-[11.5px] font-semibold transition",
-                  rol === r.id ? "bg-card text-[var(--text)] shadow-sm" : "text-[var(--text-3)] hover:text-[var(--text)]",
-                )}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-        </div>
         <div className="flex items-center gap-2.5 rounded-xl px-2 py-1.5">
           <Avatar nombre={yo.nombre} color={yo.color} size={34} />
           <div className="min-w-0 flex-1 leading-tight">
