@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
+  CalendarClock,
   CalendarPlus,
   ChevronDown,
   ChevronLeft,
@@ -14,29 +15,27 @@ import {
   FileText,
   Mail,
   MessageCircle,
-  NotebookPen,
   PawPrint,
-  Phone,
   Pill,
   Plus,
   Scissors,
-  Search,
   Sparkles,
   Stethoscope,
   UserPlus,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { AGENDA_INFO, etiquetaDia, fechaLegible, isoDeTexto, mesLegible, recetaEnCurso } from "@/lib/format";
+import { AGENDA_INFO, etiquetaDia, fechaLegible, isoDeTexto, recetaEnCurso } from "@/lib/format";
 import { CITAS, CLIENTES, nombreMascota, STAFF } from "@/lib/seed";
 import { useStore } from "@/lib/store";
-import type { Agenda, Cita, Cliente, Conversacion, Nota, Receta, Visita } from "@/lib/types";
+import type { Agenda, Cita, Cliente, Conversacion, Mascota, Receta, Visita } from "@/lib/types";
 import { AgendaPill, Avatar, ChannelBadge, EstadoCitaPill } from "@/components/ui";
 import { ContactoModal, Menu, NotaModal, RecetaModal, ResumenBloque, ResumenModal } from "@/components/ResumenConsulta";
 import { descargarReceta, nombreArchivo } from "@/lib/recetaPdf";
 
-// Ficha del paciente al estilo CRM: datos del dueño a la izquierda, actividad
-// e historial clínico al centro, mascotas y próximas citas a la derecha.
+// Ficha del paciente: a la izquierda el dueño (con su menú de acciones) y sus
+// mascotas; al centro la mascota elegida (Overview, Tratamientos, Grooming);
+// a la derecha las próximas citas y la conversación.
 
 export default function PacientePage() {
   const { id } = useParams<{ id: string }>();
@@ -53,11 +52,21 @@ export default function PacientePage() {
 }
 
 type Modal = { tipo: "resumen"; visita?: Visita } | { tipo: "nota" } | { tipo: "receta" } | { tipo: "contacto"; mascota: string } | null;
+type Tab = "overview" | "tratamientos" | "grooming";
+
+interface Acciones {
+  abrirConversacion: () => void;
+  agendar: (a: Agenda, dia?: number) => void;
+  resumir: (v?: Visita) => void;
+  nota: () => void;
+  receta: () => void;
+}
 
 function Ficha({ c }: { c: Cliente }) {
   const router = useRouter();
   const { conversacionDe, setConvSel, setCalendario, setDiaCalendario, visitas, conversaciones } = useStore();
   const [modal, setModal] = useState<Modal>(null);
+  const [mascota, setMascota] = useState(c.mascotas[0].nombre);
   const [tab, setTab] = useState<Tab>("overview");
   // Aviso al pie: cita agendada desde un resumen o receta enviada.
   const [aviso, setAviso] = useState<{ tipo: "cita"; cita: Cita } | { tipo: "receta"; receta: Receta } | null>(null);
@@ -68,7 +77,10 @@ function Ficha({ c }: { c: Cliente }) {
   }, [aviso]);
 
   const suyas = useMemo(() => visitas.filter((v) => v.clienteId === c.id), [visitas, c.id]);
-  const conv = conversaciones.find((x) => x.clienteId === c.id);
+  const m = c.mascotas.find((x) => x.nombre === mascota) ?? c.mascotas[0];
+  const deLaMascota = suyas.filter((v) => v.mascota === m.nombre);
+  // La conversación del dueño (las de contactos secundarios son de otra persona).
+  const conv = conversaciones.find((x) => x.clienteId === c.id && !x.contacto);
 
   const abrirConversacion = () => {
     setConvSel(conversacionDe(c.id));
@@ -79,25 +91,56 @@ function Ficha({ c }: { c: Cliente }) {
     setDiaCalendario(dia);
     router.push("/agendas");
   };
-  const acciones = { abrirConversacion, agendar, resumir: (v?: Visita) => setModal({ tipo: "resumen", visita: v }), nota: () => setModal({ tipo: "nota" }), receta: () => setModal({ tipo: "receta" }) };
+  const acciones: Acciones = {
+    abrirConversacion,
+    agendar,
+    resumir: (v?: Visita) => setModal({ tipo: "resumen", visita: v }),
+    nota: () => setModal({ tipo: "nota" }),
+    receta: () => setModal({ tipo: "receta" }),
+  };
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-3 outline-none sm:p-4">
-      <div className="grid gap-4 lg:grid-cols-[290px_minmax(0,1fr)] 2xl:grid-cols-[290px_minmax(0,1fr)_300px]">
+      <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)_300px]">
         <div className="space-y-4">
-          <Contacto c={c} acciones={acciones} />
+          <Dueno c={c} acciones={acciones} />
+          <Mascotas
+            c={c}
+            visitas={suyas}
+            sel={m.nombre}
+            elegir={(n) => {
+              setMascota(n);
+              setTab("overview");
+            }}
+            agregar={(n) => setModal({ tipo: "contacto", mascota: n })}
+          />
         </div>
         <div className="min-w-0 lg:row-span-2 2xl:row-span-1">
-          <Centro c={c} tab={tab} setTab={setTab} visitas={suyas} acciones={acciones} />
+          <Centro c={c} m={m} tab={tab} setTab={setTab} visitas={deLaMascota} acciones={acciones} />
         </div>
         <div className="space-y-4 lg:col-start-1 2xl:col-start-3 2xl:row-start-1">
-          <Mascotas c={c} visitas={suyas} agregar={(mascota) => setModal({ tipo: "contacto", mascota })} />
           <ProximasCitas c={c} />
           <ConversacionCard conv={conv} abrir={abrirConversacion} />
         </div>
       </div>
 
-      {modal?.tipo === "resumen" && <ResumenModal c={c} visita={modal.visita} onClose={() => setModal(null)} onAgendada={(cita) => setAviso({ tipo: "cita", cita })} />}
+      {modal?.tipo === "resumen" && (
+        <ResumenModal c={c} visita={modal.visita} mascotaInicial={m.nombre} onClose={() => setModal(null)} onAgendada={(cita) => setAviso({ tipo: "cita", cita })} />
+      )}
+      {modal?.tipo === "nota" && <NotaModal c={c} onClose={() => setModal(null)} />}
+      {modal?.tipo === "contacto" && <ContactoModal c={c} mascota={modal.mascota} onClose={() => setModal(null)} />}
+      {modal?.tipo === "receta" && (
+        <RecetaModal
+          c={c}
+          mascotaInicial={m.nombre}
+          onClose={() => setModal(null)}
+          onEnviada={(receta) => {
+            setMascota(receta.mascota);
+            setTab("tratamientos");
+            setAviso({ tipo: "receta", receta });
+          }}
+        />
+      )}
       {aviso && (
         <div role="status" className="fixed bottom-4 left-1/2 z-[70] flex w-[min(520px,calc(100vw-32px))] -translate-x-1/2 items-center gap-3 rounded-xl bg-[var(--text)] px-4 py-3 text-[13px] text-white shadow-2xl">
           {aviso.tipo === "cita" ? <CalendarPlus size={18} className="shrink-0" /> : <Pill size={18} className="shrink-0" />}
@@ -126,104 +169,58 @@ function Ficha({ c }: { c: Cliente }) {
           </button>
         </div>
       )}
-      {modal?.tipo === "nota" && <NotaModal c={c} onClose={() => setModal(null)} />}
-      {modal?.tipo === "contacto" && <ContactoModal c={c} mascota={modal.mascota} onClose={() => setModal(null)} />}
-      {modal?.tipo === "receta" && (
-        <RecetaModal
-          c={c}
-          onClose={() => setModal(null)}
-          onEnviada={(receta) => {
-            setTab("tratamientos");
-            setAviso({ tipo: "receta", receta });
-          }}
-        />
-      )}
     </div>
   );
 }
 
-interface Acciones {
-  abrirConversacion: () => void;
-  agendar: (a: Agenda) => void;
-  resumir: (v?: Visita) => void;
-  nota: () => void;
-  receta: () => void;
-}
+/* ---------- Columna izquierda: dueño y mascotas ---------- */
 
-/* ---------- Columna izquierda: dueño ---------- */
-
-function Contacto({ c, acciones }: { c: Cliente; acciones: Acciones }) {
-
-  const rapidas: { label: string; Icon: typeof Mail; onClick?: () => void; href?: string }[] = [
-    { label: "Receta", Icon: Pill, onClick: acciones.receta },
-    { label: "Correo", Icon: Mail, href: `mailto:${c.correo}` },
-    { label: "Chat", Icon: MessageCircle, onClick: acciones.abrirConversacion },
-    { label: "Llamar", Icon: Phone, href: `tel:${c.telefono.replace(/\s/g, "")}` },
-    { label: "Cita", Icon: CalendarPlus, onClick: () => acciones.agendar("clinica") },
-    { label: "Resumen", Icon: ClipboardPen, onClick: () => acciones.resumir() },
-  ];
-
+function Dueno({ c, acciones }: { c: Cliente; acciones: Acciones }) {
+  const tel = c.telefono.replace(/\s/g, "");
   return (
-    <>
-      <section className="rounded-2xl border border-line bg-card p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <Link href="/pacientes" className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--text-2)] hover:text-brand">
-            <ChevronLeft size={16} /> Pacientes
-          </Link>
-          <Menu
-            label="Acciones"
-            items={[
-              { label: "Abrir conversación", onClick: acciones.abrirConversacion },
-              { label: "Agendar en veterinaria", onClick: () => acciones.agendar("clinica") },
-              { label: "Agendar en grooming", onClick: () => acciones.agendar("grooming") },
-              { label: "Resumir consulta", onClick: () => acciones.resumir() },
-              { label: "Agregar nota", onClick: acciones.nota },
-              { label: "Escribir receta", onClick: acciones.receta },
-            ]}
-          />
-        </div>
+    <section className="rounded-2xl border border-line bg-card p-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <Link href="/pacientes" className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--text-2)] hover:text-brand">
+          <ChevronLeft size={16} /> Pacientes
+        </Link>
+        <Menu
+          label="Acciones"
+          items={[
+            { label: "Abrir conversación", onClick: acciones.abrirConversacion },
+            { label: "Escribir receta", onClick: acciones.receta },
+            { label: "Resumir consulta", onClick: () => acciones.resumir() },
+            { label: "Agendar en veterinaria", onClick: () => acciones.agendar("clinica") },
+            { label: "Agendar en grooming", onClick: () => acciones.agendar("grooming") },
+            { label: "Enviar correo", href: `mailto:${c.correo}` },
+            { label: "Llamar", href: `tel:${tel}` },
+            { label: "Agregar nota", onClick: acciones.nota },
+          ]}
+        />
+      </div>
 
-        <div className="mt-4 flex items-start gap-3">
-          <Avatar nombre={c.nombre} size={48} />
-          <div className="min-w-0">
-            <h1 className="text-[19px] font-extrabold leading-tight tracking-tight">{c.nombre}</h1>
-            <p className="mt-0.5 text-[12.5px] text-[var(--text-3)]">Dueño de {c.mascotas.map((m) => nombreMascota(m.nombre, c)).join(", ")}</p>
-          </div>
+      <div className="mt-4 flex items-start gap-3">
+        <Avatar nombre={c.nombre} size={48} />
+        <div className="min-w-0">
+          <h1 className="text-[19px] font-extrabold leading-tight tracking-tight">{c.nombre}</h1>
+          <p className="mt-0.5 text-[12.5px] text-[var(--text-3)]">Dueño · {c.mascotas.length === 1 ? "1 mascota" : `${c.mascotas.length} mascotas`}</p>
         </div>
-        <div className="mt-3 space-y-1 text-[13px]">
-          <Copiable valor={c.correo} href={`mailto:${c.correo}`} />
-          <Copiable valor={c.telefono} href={`tel:${c.telefono.replace(/\s/g, "")}`} />
-        </div>
-
-        <button
-          type="button"
-          onClick={acciones.abrirConversacion}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2.5 text-[13.5px] font-bold text-white shadow-sm shadow-brand/25 hover:bg-brand-dark"
-        >
-          <MessageCircle size={16} /> Chat con {c.nombre.split(" ")[0]}
-          <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold">{c.canal === "whatsapp" ? "WhatsApp" : c.canal === "instagram" ? "Instagram" : "Facebook"}</span>
-        </button>
-
-        <div className="mt-4 grid grid-cols-6 gap-1">
-          {rapidas.map(({ label, Icon, onClick, href }) => {
-            const contenido = (
-              <>
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-card text-[var(--text-2)] transition group-hover:border-brand group-hover:text-brand">
-                  <Icon size={16} />
-                </span>
-                <span className="text-[11px] font-medium text-[var(--text-2)]">{label}</span>
-              </>
-            );
-            return href ? (
-              <a key={label} href={href} className="group flex flex-col items-center gap-1">{contenido}</a>
-            ) : (
-              <button key={label} type="button" onClick={onClick} className="group flex flex-col items-center gap-1">{contenido}</button>
-            );
-          })}
-        </div>
-      </section>
-
-    </>
+      </div>
+      <div className="mt-3 space-y-1 text-[13px]">
+        <Copiable valor={c.correo} href={`mailto:${c.correo}`} />
+        <Copiable valor={c.telefono} href={`tel:${tel}`} />
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <ChannelBadge canal={c.canal} label />
+        {c.creadoPorIA && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11.5px] font-semibold text-violet-700">
+            <Sparkles size={11} /> Creado por Luna
+          </span>
+        )}
+        {c.etiquetas?.map((e) => (
+          <span key={e} className="rounded-full bg-surface px-2 py-0.5 text-[11.5px] font-semibold text-[var(--text-2)]">{e}</span>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -235,10 +232,13 @@ function Copiable({ valor, href }: { valor: string; href: string }) {
       <button
         type="button"
         onClick={() => {
-          navigator.clipboard?.writeText(valor).then(() => {
-            setCopiado(true);
-            setTimeout(() => setCopiado(false), 1200);
-          }).catch(() => {});
+          navigator.clipboard
+            ?.writeText(valor)
+            .then(() => {
+              setCopiado(true);
+              setTimeout(() => setCopiado(false), 1200);
+            })
+            .catch(() => {});
         }}
         title="Copiar"
         aria-label={`Copiar ${valor}`}
@@ -251,18 +251,131 @@ function Copiable({ valor, href }: { valor: string; href: string }) {
   );
 }
 
-/* ---------- Columna central ---------- */
+/** Mascotas del dueño: al elegir una, el centro muestra su perfil. */
+function Mascotas({
+  c,
+  visitas,
+  sel,
+  elegir,
+  agregar,
+}: {
+  c: Cliente;
+  visitas: Visita[];
+  sel: string;
+  elegir: (nombre: string) => void;
+  agregar: (nombre: string) => void;
+}) {
+  const { contactosDe } = useStore();
+  const ultima = (m: string, a: Agenda) => visitas.filter((v) => v.mascota === m && v.agenda === a).sort((x, y) => y.fecha.localeCompare(x.fecha))[0];
 
-type Tab = "overview" | "tratamientos" | "actividad";
+  return (
+    <section className="rounded-2xl border border-line bg-card shadow-sm">
+      <p className="px-4 pt-3 pb-2 text-[14px] font-bold">Mascotas ({c.mascotas.length})</p>
+      <div className="space-y-2 px-3 pb-3">
+        {c.mascotas.map((m) => {
+          const activa = m.nombre === sel;
+          const contactos = contactosDe(c.id, m.nombre);
+          const uc = ultima(m.nombre, "clinica");
+          const ug = ultima(m.nombre, "grooming");
+          return (
+            <div key={m.nombre} className={cn("rounded-xl border transition", activa ? "border-brand bg-brand/[0.04] ring-1 ring-brand" : "border-line hover:border-brand/40")}>
+              <button type="button" onClick={() => elegir(m.nombre)} aria-pressed={activa} className="flex w-full items-center gap-2.5 p-3 text-left">
+                <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", activa ? "bg-brand text-white" : "bg-surface text-[var(--text-2)]")}>
+                  <PawPrint size={17} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-bold">{nombreMascota(m.nombre, c)}</span>
+                    {m.creadaPorIA && <span className="rounded bg-violet-50 px-1 text-[10px] font-semibold text-violet-700">Nueva · Luna</span>}
+                  </span>
+                  <span className="block truncate text-[12px] text-[var(--text-3)]">
+                    {m.especie} · {m.raza} · {m.edad}
+                  </span>
+                </span>
+                <ChevronRight size={16} className={cn("shrink-0 text-[var(--text-3)] transition", activa && "rotate-90 text-brand")} />
+              </button>
+
+              {activa && (
+                <div className="border-t border-line px-3 pb-3 pt-2.5">
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px]">
+                    {m.tamano && (
+                      <>
+                        <dt className="text-[var(--text-3)]">Tamaño</dt>
+                        <dd className="font-medium">{m.tamano}</dd>
+                      </>
+                    )}
+                    <dt className="text-[var(--text-3)]">Última clínica</dt>
+                    <dd className="font-medium">{uc ? fechaLegible(uc.fecha) : "—"}</dd>
+                    <dt className="text-[var(--text-3)]">Último grooming</dt>
+                    <dd className="font-medium">{ug ? fechaLegible(ug.fecha) : "—"}</dd>
+                  </dl>
+                  <div className="mt-3 flex items-center justify-between">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-3)]">Contactos secundarios</p>
+                    <button type="button" onClick={() => agregar(m.nombre)} className="inline-flex items-center gap-0.5 text-[12px] font-semibold text-brand hover:underline">
+                      <Plus size={13} /> Agregar
+                    </button>
+                  </div>
+                  {contactos.length === 0 ? (
+                    <p className="mt-1 text-[12px] text-[var(--text-3)]">Solo el dueño. Si escribe otra persona por {nombreMascota(m.nombre, c)}, Luna la agrega aquí.</p>
+                  ) : (
+                    <div className="mt-1.5 space-y-1.5">
+                      {contactos.map((k) => (
+                        <div key={k.telefono} className="rounded-lg bg-surface px-2.5 py-1.5 text-[12.5px]">
+                          <p className="flex flex-wrap items-center gap-1.5 font-semibold">
+                            <UserPlus size={13} className="text-[var(--text-3)]" /> {k.nombre}
+                            {k.creadoPorIA && (
+                              <span className="inline-flex items-center gap-0.5 rounded bg-violet-100 px-1 text-[10px] font-semibold text-violet-700">
+                                <Sparkles size={9} /> Creado por Luna
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-[var(--text-2)]">{k.relacion}</p>
+                          <p className="text-[var(--text-3)]">
+                            {k.telefono}
+                            {k.desde ? ` · desde ${k.desde.toLowerCase() === "hoy" ? "hoy" : k.desde}` : ""}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {!activa && contactos.length > 0 && (
+                <p className="-mt-1 flex items-center gap-1 px-3 pb-2.5 pl-[60px] text-[11.5px] text-violet-700">
+                  <UserPlus size={11} /> {contactos.length} {contactos.length === 1 ? "contacto secundario" : "contactos secundarios"}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Columna central: la mascota elegida ---------- */
+
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "tratamientos", label: "Tratamientos" },
-  { id: "actividad", label: "Actividad" },
+  { id: "grooming", label: "Grooming" },
 ];
 
-function Centro({ c, tab, setTab, visitas, acciones }: { c: Cliente; tab: Tab; setTab: (t: Tab) => void; visitas: Visita[]; acciones: Acciones }) {
+function Centro({ c, m, tab, setTab, visitas, acciones }: { c: Cliente; m: Mascota; tab: Tab; setTab: (t: Tab) => void; visitas: Visita[]; acciones: Acciones }) {
   return (
     <section className="rounded-2xl border border-line bg-card shadow-sm">
+      <div className="flex items-center gap-3 border-b border-line px-4 py-3.5">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand text-white">
+          <PawPrint size={22} />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-[18px] font-extrabold leading-tight tracking-tight">{nombreMascota(m.nombre, c)}</h2>
+          <p className="text-[12.5px] text-[var(--text-3)]">
+            {m.especie} · {m.raza} · {m.edad}
+            {m.tamano ? ` · ${m.tamano}` : ""}
+          </p>
+        </div>
+      </div>
       <div className="grid grid-cols-3 border-b border-line">
         {TABS.map((t) => (
           <button
@@ -270,8 +383,8 @@ function Centro({ c, tab, setTab, visitas, acciones }: { c: Cliente; tab: Tab; s
             type="button"
             onClick={() => setTab(t.id)}
             className={cn(
-              "border-b-2 px-2 py-3 text-[13px] font-semibold transition first:rounded-tl-2xl last:rounded-tr-2xl sm:px-3 sm:text-[14px]",
-              tab === t.id ? "border-brand bg-card text-[var(--text)]" : "border-transparent bg-surface/60 text-[var(--text-3)] hover:text-[var(--text)]",
+              "border-b-2 px-2 py-3 text-[13px] font-semibold transition sm:px-3 sm:text-[14px]",
+              tab === t.id ? "border-brand text-[var(--text)]" : "border-transparent bg-surface/60 text-[var(--text-3)] hover:text-[var(--text)]",
             )}
           >
             {t.label}
@@ -279,31 +392,47 @@ function Centro({ c, tab, setTab, visitas, acciones }: { c: Cliente; tab: Tab; s
         ))}
       </div>
       <div className="p-4">
-        {tab === "overview" && <TabOverview c={c} visitas={visitas} acciones={acciones} irA={setTab} />}
-        {tab === "tratamientos" && <TabTratamientos c={c} nueva={acciones.receta} />}
-        {tab === "actividad" && <TabActividad c={c} visitas={visitas} acciones={acciones} />}
+        {tab === "overview" && <TabOverview c={c} m={m} visitas={visitas} acciones={acciones} irA={setTab} />}
+        {tab === "tratamientos" && <TabTratamientos c={c} m={m} nueva={acciones.receta} />}
+        {tab === "grooming" && <TabGrooming c={c} m={m} visitas={visitas} acciones={acciones} />}
       </div>
     </section>
   );
 }
 
+const proximasDe = (c: Cliente, mascota: string, agenda?: Agenda) =>
+  CITAS.filter((x) => x.clienteId === c.id && x.mascota === mascota && (!agenda || x.agenda === agenda) && x.dia >= 0 && !["completada", "cancelada", "reagendada"].includes(x.estado)).sort(
+    (a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora),
+  );
+
 /* Overview */
 
-function TabOverview({ c, visitas, acciones, irA }: { c: Cliente; visitas: Visita[]; acciones: Acciones; irA: (t: Tab) => void }) {
+function TabOverview({ c, m, visitas, acciones, irA }: { c: Cliente; m: Mascota; visitas: Visita[]; acciones: Acciones; irA: (t: Tab) => void }) {
   const { recetas, notas } = useStore();
-  const enCurso = recetas.filter((r) => r.clienteId === c.id && recetaEnCurso(r));
+  const enCurso = recetas.filter((r) => r.clienteId === c.id && r.mascota === m.nombre && recetaEnCurso(r));
   const susNotas = notas.filter((n) => n.clienteId === c.id);
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Cifra Icon={Stethoscope} valor={visitas.filter((v) => v.agenda === "clinica").length} label="Visitas a clínica" color="var(--clinica)" />
-        <Cifra Icon={Scissors} valor={visitas.filter((v) => v.agenda === "grooming").length} label="Visitas a grooming" color="var(--grooming)" />
+        <Cifra Icon={Scissors} valor={visitas.filter((v) => v.agenda === "grooming").length} label="Visitas a grooming" color="var(--grooming)" onClick={() => irA("grooming")} />
         <Cifra Icon={Pill} valor={enCurso.length} label="Tratamientos en curso" color="var(--brand-blue)" onClick={() => irA("tratamientos")} />
-        <Cifra Icon={NotebookPen} valor={susNotas.length} label="Notas" color="var(--text-2)" onClick={() => irA("actividad")} />
+        <Cifra Icon={CalendarClock} valor={proximasDe(c, m.nombre).length} label="Citas próximas" color="var(--text-2)" />
       </div>
 
-      <UltimasVisitas c={c} visitas={visitas} acciones={acciones} />
+      <Historial
+        visitas={visitas.filter((v) => v.agenda === "clinica")}
+        titulo="Historial clínico · últimas visitas"
+        sub="Cada consulta con el resumen del veterinario (uso interno)."
+        accion={
+          <button type="button" onClick={() => acciones.resumir()} className="inline-flex items-center gap-1 rounded-lg bg-[var(--clinica)] px-3 py-1.5 text-[12.5px] font-bold text-white hover:opacity-90">
+            <ClipboardPen size={14} /> Resumir consulta
+          </button>
+        }
+        acciones={acciones}
+        vacio={`${m.nombre} todavía no tiene visitas a clínica.`}
+      />
 
       {enCurso.length > 0 && (
         <div className="rounded-xl border border-line p-4">
@@ -319,7 +448,7 @@ function TabOverview({ c, visitas, acciones, irA }: { c: Cliente; visitas: Visit
                 <li key={r.id + i.medicamento} className="flex flex-wrap items-center gap-x-2">
                   <Pill size={13} className="text-[var(--text-3)]" />
                   <b>{i.medicamento}</b>
-                  <span className="text-[var(--text-2)]">· {r.mascota} · {i.frecuencia} · {i.duracion}</span>
+                  <span className="text-[var(--text-2)]">· {i.frecuencia} · {i.duracion}</span>
                 </li>
               )),
             )}
@@ -329,7 +458,7 @@ function TabOverview({ c, visitas, acciones, irA }: { c: Cliente; visitas: Visit
 
       <div className="rounded-xl border border-line p-4">
         <div className="flex items-center justify-between">
-          <p className="text-[14px] font-bold">Notas recientes</p>
+          <p className="text-[14px] font-bold">Notas del dueño</p>
           <button type="button" onClick={acciones.nota} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand">
             <Plus size={14} /> Agregar
           </button>
@@ -339,7 +468,9 @@ function TabOverview({ c, visitas, acciones, irA }: { c: Cliente; visitas: Visit
           {susNotas.slice(0, 3).map((n) => (
             <div key={n.id} className="rounded-lg bg-surface px-3 py-2 text-[13px]">
               <p>{n.texto}</p>
-              <p className="mt-1 text-[11.5px] text-[var(--text-3)]">{n.autor} · {fechaLegible(n.fecha)} {n.hora}</p>
+              <p className="mt-1 text-[11.5px] text-[var(--text-3)]">
+                {n.autor} · {fechaLegible(n.fecha)} {n.hora}
+              </p>
             </div>
           ))}
         </div>
@@ -357,9 +488,106 @@ function Cifra({ Icon, valor, label, color, onClick }: { Icon: typeof Mail; valo
     </>
   );
   return onClick ? (
-    <button type="button" onClick={onClick} className="rounded-xl border border-line p-3 text-left transition hover:border-brand/50 hover:bg-surface">{cuerpo}</button>
+    <button type="button" onClick={onClick} className="rounded-xl border border-line p-3 text-left transition hover:border-brand/50 hover:bg-surface">
+      {cuerpo}
+    </button>
   ) : (
     <div className="rounded-xl border border-line p-3">{cuerpo}</div>
+  );
+}
+
+/** Línea de tiempo de visitas de una agenda; las de clínica llevan el resumen de consulta. */
+function Historial({
+  visitas,
+  titulo,
+  sub,
+  accion,
+  acciones,
+  vacio,
+}: {
+  visitas: Visita[];
+  titulo: string;
+  sub: string;
+  accion?: ReactNode;
+  acciones: Acciones;
+  vacio: string;
+}) {
+  const { resumenes } = useStore();
+  const [todas, setTodas] = useState(false);
+  const orden = [...visitas].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.hora.localeCompare(a.hora));
+  // La consulta resumida más reciente abre desplegada.
+  const [abierta, setAbierta] = useState<string | null>(() => orden.find((v) => resumenes[v.id])?.id ?? null);
+  const lista = todas ? orden : orden.slice(0, 5);
+
+  return (
+    <div className="rounded-xl border border-line p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[14px] font-bold">{titulo}</p>
+          <p className="text-[12.5px] text-[var(--text-3)]">{sub}</p>
+        </div>
+        {accion}
+      </div>
+
+      {orden.length === 0 && <p className="py-8 text-center text-[13px] text-[var(--text-3)]">{vacio}</p>}
+      <ol className="relative mt-4 space-y-3 border-l-2 border-line pl-5">
+        {lista.map((v) => {
+          const r = resumenes[v.id];
+          const ver = abierta === v.id;
+          return (
+            <li key={v.id} className="relative">
+              <span className="absolute -left-[27px] top-3.5 h-3 w-3 rounded-full border-2 border-card" style={{ backgroundColor: AGENDA_INFO[v.agenda].color }} />
+              <div className="rounded-xl border border-line p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] font-bold">
+                      {fechaLegible(v.fecha)} · {v.hora}
+                      <span className="font-normal text-[var(--text-2)]">· {v.servicio}</span>
+                    </p>
+                    {v.agenda === "grooming" ? (
+                      <p className="mt-1 text-[12.5px] text-[var(--text-3)]">Atendió {v.atendio}</p>
+                    ) : r ? (
+                      <p className="mt-1 text-[12.5px] text-[var(--text-2)]">
+                        <b>Diagnóstico:</b> {r.diagnostico} · <b>Control:</b> {r.proximoControl}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-[12.5px] text-amber-700">Sin resumen de consulta</p>
+                    )}
+                  </div>
+                  {v.agenda === "clinica" &&
+                    (r ? (
+                      <button type="button" onClick={() => setAbierta(ver ? null : v.id)} className="text-[12.5px] font-semibold text-brand hover:underline">
+                        {ver ? "Ocultar" : "Ver resumen"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => acciones.resumir(v)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-[var(--clinica)] px-2 py-1 text-[12px] font-semibold text-[var(--clinica)] hover:bg-[var(--clinica-soft)]"
+                      >
+                        <ClipboardPen size={13} /> Resumir
+                      </button>
+                    ))}
+                </div>
+                {ver && r && (
+                  <>
+                    <ResumenBloque r={r} className="mt-3" />
+                    <button type="button" onClick={() => acciones.resumir(v)} className="mt-2 text-[12px] font-semibold text-brand hover:underline">
+                      Editar resumen
+                    </button>
+                  </>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      {orden.length > 5 && (
+        <button type="button" onClick={() => setTodas((x) => !x)} className="mt-3 text-[12.5px] font-semibold text-brand hover:underline">
+          {todas ? "Ver menos" : `Ver todas las visitas (${orden.length})`}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -371,19 +599,20 @@ const ESTADO_RX: Record<Receta["estado"], { label: string; className: string }> 
   duda: { label: "Cliente con duda", className: "bg-rose-50 text-rose-700" },
 };
 
-function TabTratamientos({ c, nueva }: { c: Cliente; nueva: () => void }) {
+const esHora = (h: string) => /^\d{2}:\d{2}$/.test(h);
+
+function TabTratamientos({ c, m, nueva }: { c: Cliente; m: Mascota; nueva: () => void }) {
   const { recetas, visitas, resumenes } = useStore();
   const [estado, setEstado] = useState<"todos" | "curso" | "fin">("todos");
-  const [mascota, setMascota] = useState("todas");
   const suyas = recetas
-    .filter((r) => r.clienteId === c.id)
+    .filter((r) => r.clienteId === c.id && r.mascota === m.nombre)
     .map((r) => ({ r, fecha: isoDeTexto(r.fecha), curso: recetaEnCurso(r) }))
     .sort((a, b) => b.fecha.localeCompare(a.fecha));
-  const lista = suyas.filter((x) => (estado === "todos" || (estado === "curso") === x.curso) && (mascota === "todas" || x.r.mascota === mascota));
+  const lista = suyas.filter((x) => estado === "todos" || (estado === "curso") === x.curso);
 
   // Diagnóstico de la consulta del mismo día, si el veterinario la resumió.
-  const diagnostico = (m: string, fecha: string) => {
-    const v = visitas.find((x) => x.clienteId === c.id && x.agenda === "clinica" && x.mascota === m && x.fecha === fecha && resumenes[x.id]);
+  const diagnostico = (fecha: string) => {
+    const v = visitas.find((x) => x.clienteId === c.id && x.agenda === "clinica" && x.mascota === m.nombre && x.fecha === fecha && resumenes[x.id]);
     return v ? resumenes[v.id].diagnostico : undefined;
   };
 
@@ -392,7 +621,7 @@ function TabTratamientos({ c, nueva }: { c: Cliente; nueva: () => void }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-[15px] font-bold">Tratamientos</p>
-          <p className="text-[12.5px] text-[var(--text-3)]">Recetas que el veterinario le ha dado a {c.mascotas.length === 1 ? c.mascotas[0].nombre : "sus mascotas"}.</p>
+          <p className="text-[12.5px] text-[var(--text-3)]">Recetas que el veterinario le ha dado a {nombreMascota(m.nombre, c)}.</p>
         </div>
         <button type="button" onClick={nueva} className="inline-flex items-center gap-1 rounded-lg bg-[var(--clinica)] px-3 py-1.5 text-[12.5px] font-bold text-white hover:opacity-90">
           <Plus size={14} /> Nueva receta
@@ -411,32 +640,23 @@ function TabTratamientos({ c, nueva }: { c: Cliente; nueva: () => void }) {
             {label} <span className="opacity-60">{id === "todos" ? suyas.length : suyas.filter((x) => (id === "curso") === x.curso).length}</span>
           </Chip>
         ))}
-        {c.mascotas.length > 1 &&
-          ["todas", ...c.mascotas.map((m) => m.nombre)].map((m) => (
-            <Chip key={m} on={mascota === m} onClick={() => setMascota(m)}>
-              {m === "todas" ? "Todas las mascotas" : m}
-            </Chip>
-          ))}
       </div>
 
       {lista.length === 0 && (
         <div className="py-10 text-center text-[13px] text-[var(--text-3)]">
           <Pill size={26} className="mx-auto mb-2 opacity-50" />
-          {suyas.length === 0 ? "Este paciente todavía no tiene recetas." : "Sin tratamientos con este filtro."}
+          {suyas.length === 0 ? `${m.nombre} todavía no tiene recetas.` : "Sin tratamientos con este filtro."}
         </div>
       )}
       <div className="mt-4 space-y-3">
         {lista.map(({ r, fecha, curso }) => {
-          const dx = diagnostico(r.mascota, fecha);
+          const dx = diagnostico(fecha);
           return (
             <div key={r.id} className="rounded-xl border border-line p-3.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="flex items-center gap-2 text-[13.5px] font-bold">
-                  <FileText size={15} className="text-[var(--clinica)]" /> {r.mascota}
-                  <span className="font-normal text-[var(--text-3)]">
-                    · {fechaLegible(fecha)}
-                    {esHora(r.hora) ? ` · ${r.hora}` : ""}
-                  </span>
+                  <FileText size={15} className="text-[var(--clinica)]" /> {fechaLegible(fecha)}
+                  {esHora(r.hora) && <span className="font-normal text-[var(--text-3)]">· {r.hora}</span>}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", curso ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600")}>
@@ -508,447 +728,81 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
   );
 }
 
-/* Actividad */
+/* Grooming */
 
-type TipoAct = "visita" | "receta" | "conversacion" | "nota";
-interface Actividad {
-  id: string;
-  tipo: TipoAct;
-  fecha: string;
-  hora: string;
-  mascota?: string;
-  conResumen?: boolean;
-  texto: string;
-  nodo: ReactNode;
-}
-
-const FILTROS: { id: "todas" | TipoAct | "resumen"; label: string }[] = [
-  { id: "todas", label: "Toda la actividad" },
-  { id: "visita", label: "Visitas" },
-  { id: "resumen", label: "Resúmenes" },
-  { id: "receta", label: "Recetas" },
-  { id: "conversacion", label: "Conversaciones" },
-  { id: "nota", label: "Notas" },
-];
-
-const esHora = (h: string) => /^\d{2}:\d{2}$/.test(h);
-
-function TabActividad({ c, visitas, acciones }: { c: Cliente; visitas: Visita[]; acciones: Acciones }) {
-  const { recetas, resumenes, notas, conversaciones } = useStore();
-  const [filtro, setFiltro] = useState<(typeof FILTROS)[number]["id"]>("todas");
-  const [q, setQ] = useState("");
-  const [mascota, setMascota] = useState("todas");
-  const [contraido, setContraido] = useState<Set<string>>(new Set());
-  const [todoContraido, setTodoContraido] = useState(false);
-
-  const todas: Actividad[] = useMemo(() => {
-    const out: Actividad[] = [];
-    for (const v of visitas) {
-      const r = resumenes[v.id];
-      out.push({
-        id: v.id,
-        tipo: "visita",
-        fecha: v.fecha,
-        hora: v.hora,
-        mascota: v.mascota,
-        conResumen: !!r,
-        texto: [v.servicio, v.mascota, v.atendio, r?.motivo, r?.diagnostico, r?.tratamiento].join(" "),
-        nodo: <VisitaDetalle v={v} acciones={acciones} />,
-      });
-    }
-    for (const rx of recetas.filter((r) => r.clienteId === c.id)) {
-      out.push({
-        id: rx.id,
-        tipo: "receta",
-        fecha: isoDeTexto(rx.fecha),
-        hora: esHora(rx.hora) ? rx.hora : "",
-        mascota: rx.mascota,
-        texto: [rx.mascota, rx.indicaciones, ...rx.items.map((i) => i.medicamento)].join(" "),
-        nodo: <RecetaDetalle r={rx} />,
-      });
-    }
-    for (const cv of conversaciones.filter((x) => x.clienteId === c.id)) {
-      out.push({
-        id: cv.id,
-        tipo: "conversacion",
-        fecha: isoDeTexto("Hoy"),
-        hora: cv.hora,
-        texto: cv.mensajes.map((m) => m.texto).join(" "),
-        nodo: <ConversacionDetalle cv={cv} abrir={acciones.abrirConversacion} />,
-      });
-    }
-    for (const n of notas.filter((x) => x.clienteId === c.id)) {
-      out.push({ id: n.id, tipo: "nota", fecha: n.fecha, hora: n.hora, texto: n.texto, nodo: <NotaDetalle n={n} /> });
-    }
-    return out.sort((a, b) => b.fecha.localeCompare(a.fecha) || b.hora.localeCompare(a.hora));
-  }, [visitas, recetas, conversaciones, notas, resumenes, c.id, acciones]);
-
-  const t = q.trim().toLowerCase();
-  const lista = todas.filter(
-    (a) =>
-      (filtro === "todas" || (filtro === "resumen" ? a.conResumen : a.tipo === filtro)) &&
-      (mascota === "todas" || !a.mascota || a.mascota === mascota) &&
-      (!t || a.texto.toLowerCase().includes(t)),
-  );
-  const porMes = lista.reduce<{ mes: string; items: Actividad[] }[]>((acc, a) => {
-    const mes = mesLegible(a.fecha);
-    const ultimo = acc[acc.length - 1];
-    if (ultimo?.mes === mes) ultimo.items.push(a);
-    else acc.push({ mes, items: [a] });
-    return acc;
-  }, []);
-
-  const abierta = (id: string) => (todoContraido ? contraido.has(id) : !contraido.has(id));
-  const alternar = (id: string) =>
-    setContraido((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
+function TabGrooming({ c, m, visitas, acciones }: { c: Cliente; m: Mascota; visitas: Visita[]; acciones: Acciones }) {
+  const grooming = visitas.filter((v) => v.agenda === "grooming");
+  const proxima = proximasDe(c, m.nombre, "grooming")[0];
 
   return (
-    <div>
-      <div className="flex gap-1 overflow-x-auto border-b border-line">
-        {FILTROS.map((f) => {
-          const n = f.id === "todas" ? todas.length : todas.filter((a) => (f.id === "resumen" ? a.conResumen : a.tipo === f.id)).length;
-          return (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFiltro(f.id)}
-              className={cn(
-                "shrink-0 border-b-2 px-3 py-2 text-[13px] font-semibold",
-                filtro === f.id ? "border-[var(--text)] text-[var(--text)]" : "border-transparent text-[var(--text-3)] hover:text-[var(--text)]",
-              )}
-            >
-              {f.label} <span className="text-[11.5px] opacity-60">{n}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <div className="flex min-w-[200px] flex-1 items-center gap-1.5 rounded-full border border-line px-3 py-1.5">
-          <Search size={14} className="text-[var(--text-3)]" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar en la actividad" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none" />
-        </div>
-        {c.mascotas.length > 1 && (
-          <select value={mascota} onChange={(e) => setMascota(e.target.value)} className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-[13px] font-semibold">
-            <option value="todas">Todas las mascotas</option>
-            {c.mascotas.map((m) => <option key={m.nombre} value={m.nombre}>{m.nombre}</option>)}
-          </select>
-        )}
-        <button
-          type="button"
-          onClick={() => {
-            setTodoContraido((x) => !x);
-            setContraido(new Set());
-          }}
-          className="rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-[var(--text-2)] hover:bg-surface"
-        >
-          {todoContraido ? "Expandir todo" : "Contraer todo"}
-        </button>
-      </div>
-
-      {porMes.length === 0 && <p className="py-10 text-center text-[13px] text-[var(--text-3)]">Sin actividad con este filtro.</p>}
-      {porMes.map((g) => (
-        <div key={g.mes}>
-          <p className="mt-5 mb-2 text-[14px] font-bold">{g.mes}</p>
-          <div className="space-y-2.5">
-            {g.items.map((a) => (
-              <ActividadCard key={a.id} a={a} abierta={abierta(a.id)} alternar={() => alternar(a.id)} />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-const TIPO: Record<TipoAct, { label: string; Icon: typeof Mail }> = {
-  visita: { label: "Visita", Icon: PawPrint },
-  receta: { label: "Receta", Icon: FileText },
-  conversacion: { label: "Conversación", Icon: MessageCircle },
-  nota: { label: "Nota", Icon: NotebookPen },
-};
-
-function ActividadCard({ a, abierta, alternar }: { a: Actividad; abierta: boolean; alternar: () => void }) {
-  const { label, Icon } = TIPO[a.tipo];
-  return (
-    <div className="rounded-xl border border-line bg-card shadow-sm">
-      <button type="button" onClick={alternar} aria-expanded={abierta} className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left">
-        <ChevronRight size={15} className={cn("shrink-0 text-[var(--text-3)] transition", abierta && "rotate-90")} />
-        <Icon size={15} className="shrink-0 text-[var(--text-2)]" />
-        <span className="min-w-0 flex-1 truncate text-[13.5px] font-bold">
-          {label}
-          {a.mascota && <span className="font-normal text-[var(--text-2)]"> · {a.mascota}</span>}
-        </span>
-        <span className="shrink-0 text-[12px] text-[var(--text-3)]">
-          {fechaLegible(a.fecha)}{a.hora && ` · ${a.hora}`}
-        </span>
-      </button>
-      {abierta && <div className="border-t border-line px-3.5 py-3">{a.nodo}</div>}
-    </div>
-  );
-}
-
-function VisitaDetalle({ v, acciones }: { v: Visita; acciones: Acciones }) {
-  const { resumenes } = useStore();
-  const r = resumenes[v.id];
-  return (
-    <div className="text-[13px]">
-      <div className="flex flex-wrap items-center gap-2">
-        <AgendaPill agenda={v.agenda} />
-        <span className="font-semibold">{v.servicio}</span>
-        <span className="text-[var(--text-3)]">· atendió {v.atendio}</span>
-      </div>
-      {v.agenda === "clinica" &&
-        (r ? (
-          <>
-            <ResumenBloque r={r} className="mt-3" />
-            <button type="button" onClick={() => acciones.resumir(v)} className="mt-2 text-[12px] font-semibold text-brand hover:underline">
-              Editar resumen
-            </button>
-          </>
-        ) : (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-[var(--clinica)]/50 bg-[var(--clinica-soft)] px-3 py-2">
-            <span className="text-[12.5px] text-[var(--clinica)]">Esta consulta todavía no tiene resumen.</span>
-            <button type="button" onClick={() => acciones.resumir(v)} className="inline-flex items-center gap-1 rounded-lg bg-[var(--clinica)] px-2.5 py-1 text-[12px] font-bold text-white">
-              <ClipboardPen size={13} /> Resumir consulta
-            </button>
-          </div>
-        ))}
-    </div>
-  );
-}
-
-function RecetaDetalle({ r }: { r: Receta }) {
-  return (
-    <div className="text-[12.5px]">
-      <ul className="space-y-1">
-        {r.items.map((i) => (
-          <li key={i.medicamento}>
-            <b>{i.medicamento}</b> <span className="text-[var(--text-2)]">· {i.dosis} · {i.frecuencia} · {i.duracion}</span>
-          </li>
-        ))}
-      </ul>
-      {r.indicaciones && <p className="mt-2 rounded-lg bg-surface px-2 py-1 text-[var(--text-2)]"><b>Indicaciones:</b> {r.indicaciones}</p>}
-    </div>
-  );
-}
-
-function ConversacionDetalle({ cv, abrir }: { cv: Conversacion; abrir: () => void }) {
-  const ultimos = cv.mensajes.filter((m) => m.autor !== "sistema").slice(-2);
-  return (
-    <div className="text-[13px]">
-      <div className="flex items-center gap-2">
-        <ChannelBadge canal={cv.canal} label />
-        {cv.agenda && <AgendaPill agenda={cv.agenda} />}
-      </div>
-      <div className="mt-2 space-y-1.5">
-        {ultimos.map((m) => (
-          <p key={m.id} className="text-[var(--text-2)]">
-            <b className="text-[var(--text)]">{m.autor === "cliente" ? "Cliente" : m.autor === "ia" ? "Luna" : "Clínica"}:</b> {m.texto}
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl p-4" style={{ backgroundColor: "var(--grooming-soft)" }}>
+          <p className="text-[12px] font-bold uppercase tracking-wider" style={{ color: "var(--grooming)" }}>
+            Próximo grooming
           </p>
-        ))}
-      </div>
-      <button type="button" onClick={abrir} className="mt-2 inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
-        Abrir en la bandeja <ChevronRight size={14} />
-      </button>
-    </div>
-  );
-}
-
-function NotaDetalle({ n }: { n: Nota }) {
-  return (
-    <div className="text-[13px]">
-      <p>{n.texto}</p>
-      <p className="mt-1 text-[11.5px] text-[var(--text-3)]">Escrita por {n.autor}</p>
-    </div>
-  );
-}
-
-/* Últimas visitas (Overview) */
-
-function UltimasVisitas({ c, visitas, acciones }: { c: Cliente; visitas: Visita[]; acciones: Acciones }) {
-  const { resumenes } = useStore();
-  const [agenda, setAgenda] = useState<"todas" | Agenda>("todas");
-  const [mascota, setMascota] = useState("todas");
-  const [todas, setTodas] = useState(false);
-  const recientes = (vs: Visita[]) => [...vs].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.hora.localeCompare(a.hora));
-  const orden = recientes(visitas.filter((v) => (agenda === "todas" || v.agenda === agenda) && (mascota === "todas" || v.mascota === mascota)));
-  // La consulta resumida más reciente abre desplegada.
-  const [abierta, setAbierta] = useState<string | null>(() => recientes(visitas.filter((v) => resumenes[v.id]))[0]?.id ?? null);
-  const lista = todas ? orden : orden.slice(0, 5);
-
-  return (
-    <div className="rounded-xl border border-line p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-[14px] font-bold">Historial · últimas visitas</p>
-          <p className="text-[12.5px] text-[var(--text-3)]">Las consultas incluyen el resumen del veterinario (uso interno).</p>
-        </div>
-        <button type="button" onClick={() => acciones.resumir()} className="inline-flex items-center gap-1 rounded-lg bg-[var(--clinica)] px-3 py-1.5 text-[12.5px] font-bold text-white hover:opacity-90">
-          <ClipboardPen size={14} /> Resumir consulta
-        </button>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {(["todas", "clinica", "grooming"] as const).map((a) => (
-          <Chip key={a} on={agenda === a} onClick={() => setAgenda(a)}>
-            {a === "todas" ? "Todas" : a === "clinica" ? "Clínica" : "Grooming"}
-          </Chip>
-        ))}
-        {c.mascotas.length > 1 &&
-          ["todas", ...c.mascotas.map((m) => m.nombre)].map((m) => (
-            <Chip key={m} on={mascota === m} onClick={() => setMascota(m)}>
-              {m === "todas" ? "Todas las mascotas" : m}
-            </Chip>
-          ))}
-      </div>
-
-      {orden.length === 0 && <p className="py-8 text-center text-[13px] text-[var(--text-3)]">Sin visitas registradas.</p>}
-      <ol className="relative mt-4 space-y-3 border-l-2 border-line pl-5">
-        {lista.map((v) => {
-          const r = resumenes[v.id];
-          const ver = abierta === v.id;
-          return (
-            <li key={v.id} className="relative">
-              <span className="absolute -left-[27px] top-3.5 h-3 w-3 rounded-full border-2 border-card" style={{ backgroundColor: AGENDA_INFO[v.agenda].color }} />
-              <div className="rounded-xl border border-line p-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] font-bold">
-                      <AgendaPill agenda={v.agenda} />
-                      {fechaLegible(v.fecha)} · {v.hora}
-                      <span className="font-normal text-[var(--text-2)]">
-                        · {v.mascota} · {v.servicio}
-                      </span>
-                    </p>
-                    {v.agenda === "grooming" ? (
-                      <p className="mt-1 text-[12.5px] text-[var(--text-3)]">Atendió {v.atendio}</p>
-                    ) : r ? (
-                      <p className="mt-1 text-[12.5px] text-[var(--text-2)]">
-                        <b>Diagnóstico:</b> {r.diagnostico} · <b>Control:</b> {r.proximoControl}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-[12.5px] text-amber-700">Sin resumen de consulta</p>
-                    )}
-                  </div>
-                  {v.agenda === "clinica" &&
-                    (r ? (
-                      <button type="button" onClick={() => setAbierta(ver ? null : v.id)} className="text-[12.5px] font-semibold text-brand hover:underline">
-                        {ver ? "Ocultar" : "Ver resumen"}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => acciones.resumir(v)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-[var(--clinica)] px-2 py-1 text-[12px] font-semibold text-[var(--clinica)] hover:bg-[var(--clinica-soft)]"
-                      >
-                        <ClipboardPen size={13} /> Resumir
-                      </button>
-                    ))}
-                </div>
-                {ver && r && (
-                  <>
-                    <ResumenBloque r={r} className="mt-3" />
-                    <button type="button" onClick={() => acciones.resumir(v)} className="mt-2 text-[12px] font-semibold text-brand hover:underline">
-                      Editar resumen
-                    </button>
-                  </>
-                )}
+          {proxima ? (
+            <>
+              <p className="mt-1.5 text-[16px] font-extrabold">
+                {etiquetaDia(proxima.dia)} · {proxima.hora}
+              </p>
+              <p className="text-[12.5px] text-[var(--text-2)]">{proxima.servicio}</p>
+              <div className="mt-2">
+                <EstadoCitaPill estado={proxima.estado} />
               </div>
-            </li>
-          );
-        })}
-      </ol>
-      {orden.length > 5 && (
-        <button type="button" onClick={() => setTodas((x) => !x)} className="mt-3 text-[12.5px] font-semibold text-brand hover:underline">
-          {todas ? "Ver menos" : `Ver todas las visitas (${orden.length})`}
-        </button>
-      )}
+            </>
+          ) : (
+            <>
+              <p className="mt-1.5 text-[13px] text-[var(--text-2)]">Sin cita de grooming agendada.</p>
+              <button
+                type="button"
+                onClick={() => acciones.agendar("grooming")}
+                className="mt-2 inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-[12.5px] font-bold text-white hover:opacity-90"
+                style={{ backgroundColor: "var(--grooming)" }}
+              >
+                <CalendarPlus size={14} /> Agendar grooming
+              </button>
+            </>
+          )}
+        </div>
+        <div className="rounded-xl border border-line p-4 text-[12.5px]">
+          <p className="text-[12px] font-bold uppercase tracking-wider text-[var(--text-3)]">Para el groomer</p>
+          <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1">
+            <dt className="text-[var(--text-3)]">Especie</dt>
+            <dd className="font-medium">{m.especie}</dd>
+            <dt className="text-[var(--text-3)]">Raza</dt>
+            <dd className="font-medium">{m.raza}</dd>
+            <dt className="text-[var(--text-3)]">Tamaño</dt>
+            <dd className="font-medium">{m.tamano ?? "—"}</dd>
+            <dt className="text-[var(--text-3)]">Visitas</dt>
+            <dd className="font-medium">{grooming.length}</dd>
+          </dl>
+        </div>
+      </div>
+
+      <Historial
+        visitas={grooming}
+        titulo="Historial de grooming"
+        sub={`Baños y cortes de ${nombreMascota(m.nombre, c)}.`}
+        acciones={acciones}
+        vacio={`${m.nombre} todavía no tiene visitas a grooming.`}
+      />
     </div>
   );
 }
 
 /* ---------- Columna derecha ---------- */
 
-function Lateral({ titulo, accion, children }: { titulo: string; accion?: ReactNode; children: ReactNode }) {
+function Lateral({ titulo, children }: { titulo: string; children: ReactNode }) {
   const [abierto, setAbierto] = useState(true);
   return (
     <section className="rounded-2xl border border-line bg-card shadow-sm">
-      <div className="flex items-center gap-2 px-4 py-3">
-        <button type="button" onClick={() => setAbierto((a) => !a)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-          <ChevronDown size={16} className={cn("shrink-0 transition", !abierto && "-rotate-90")} />
-          <span className="truncate text-[14px] font-bold">{titulo}</span>
-        </button>
-        {accion}
-      </div>
+      <button type="button" onClick={() => setAbierto((a) => !a)} className="flex w-full items-center gap-2 px-4 py-3 text-left">
+        <ChevronDown size={16} className={cn("shrink-0 transition", !abierto && "-rotate-90")} />
+        <span className="truncate text-[14px] font-bold">{titulo}</span>
+      </button>
       {abierto && <div className="border-t border-line p-3">{children}</div>}
     </section>
-  );
-}
-
-function Mascotas({ c, visitas, agregar }: { c: Cliente; visitas: Visita[]; agregar: (mascota: string) => void }) {
-  const { contactosDe } = useStore();
-  const ultima = (m: string, a: Agenda) =>
-    visitas.filter((v) => v.mascota === m && v.agenda === a).sort((x, y) => y.fecha.localeCompare(x.fecha))[0];
-  return (
-    <Lateral titulo={`Mascotas (${c.mascotas.length})`}>
-      <div className="space-y-2.5">
-        {c.mascotas.map((m) => {
-          const uc = ultima(m.nombre, "clinica");
-          const ug = ultima(m.nombre, "grooming");
-          return (
-            <div key={m.nombre} className="rounded-xl border border-line p-3">
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface text-[var(--text-2)]"><PawPrint size={16} /></span>
-                <p className="font-bold">{nombreMascota(m.nombre, c)}</p>
-                <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-300/60">{m.especie}</span>
-                {m.creadaPorIA && <span className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[10.5px] font-semibold text-violet-700">Nueva · Luna</span>}
-              </div>
-              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px]">
-                <dt className="text-[var(--text-3)]">Raza</dt><dd className="font-medium">{m.raza}</dd>
-                <dt className="text-[var(--text-3)]">Edad</dt><dd className="font-medium">{m.edad}</dd>
-                {m.tamano && (<><dt className="text-[var(--text-3)]">Tamaño</dt><dd className="font-medium">{m.tamano}</dd></>)}
-                <dt className="text-[var(--text-3)]">Última clínica</dt><dd className="font-medium">{uc ? fechaLegible(uc.fecha) : "—"}</dd>
-                <dt className="text-[var(--text-3)]">Último grooming</dt><dd className="font-medium">{ug ? fechaLegible(ug.fecha) : "—"}</dd>
-              </dl>
-              <div className="mt-3 border-t border-line pt-2.5">
-                <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-3)]">Contactos secundarios</p>
-                  <button type="button" onClick={() => agregar(m.nombre)} className="inline-flex items-center gap-0.5 text-[12px] font-semibold text-brand hover:underline">
-                    <Plus size={13} /> Agregar
-                  </button>
-                </div>
-                {contactosDe(c.id, m.nombre).length === 0 ? (
-                  <p className="mt-1 text-[12px] text-[var(--text-3)]">Solo el dueño. Si escribe otra persona por {nombreMascota(m.nombre, c)}, Luna la agrega aquí.</p>
-                ) : (
-                  <div className="mt-1.5 space-y-1.5">
-                    {contactosDe(c.id, m.nombre).map((k) => (
-                      <div key={k.telefono} className="rounded-lg bg-surface px-2.5 py-1.5 text-[12.5px]">
-                        <p className="flex flex-wrap items-center gap-1.5 font-semibold">
-                          <UserPlus size={13} className="text-[var(--text-3)]" /> {k.nombre}
-                          {k.creadoPorIA && (
-                            <span className="inline-flex items-center gap-0.5 rounded bg-violet-100 px-1 text-[10px] font-semibold text-violet-700">
-                              <Sparkles size={9} /> Creado por Luna
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-[var(--text-2)]">{k.relacion}</p>
-                        <p className="text-[var(--text-3)]">{k.telefono}{k.desde ? ` · desde ${k.desde.toLowerCase() === "hoy" ? "hoy" : k.desde}` : ""}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </Lateral>
   );
 }
 
@@ -971,8 +825,12 @@ function ProximasCitas({ c }: { c: Cliente }) {
                 <AgendaPill agenda={x.agenda} />
                 <EstadoCitaPill estado={x.estado} />
               </div>
-              <p className="mt-1.5 font-semibold">{x.servicio} · {x.mascota}</p>
-              <p className="text-[var(--text-3)]">{etiquetaDia(x.dia)} · {x.hora}</p>
+              <p className="mt-1.5 font-semibold">
+                {x.servicio} · {nombreMascota(x.mascota, c)}
+              </p>
+              <p className="text-[var(--text-3)]">
+                {etiquetaDia(x.dia)} · {x.hora}
+              </p>
             </div>
           ))}
         </div>

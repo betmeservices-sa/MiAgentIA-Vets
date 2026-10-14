@@ -87,17 +87,20 @@ function diasDisponibles(agenda: Agenda) {
 export function ResumenModal({
   c,
   visita,
+  mascotaInicial,
   onClose,
   onAgendada,
 }: {
   c: Cliente;
   visita?: Visita;
+  /** Mascota con la que abre el formulario (la seleccionada en la ficha). */
+  mascotaInicial?: string;
   onClose: () => void;
   /** Avisa qué cita se agendó para mostrarlo en la ficha. */
   onAgendada?: (cita: Cita) => void;
 }) {
   const { visitas, resumenes, guardarResumen, agregarCita } = useStore();
-  const [mascota, setMascota] = useState(visita?.mascota ?? c.mascotas[0].nombre);
+  const [mascota, setMascota] = useState(visita?.mascota ?? mascotaInicial ?? c.mascotas[0].nombre);
   const pendientes = visitas
     .filter((v) => v.clienteId === c.id && v.agenda === "clinica" && v.mascota === mascota && !resumenes[v.id])
     .sort((a, b) => b.fecha.localeCompare(a.fecha));
@@ -364,9 +367,19 @@ const vacio = (): ItemReceta => ({ medicamento: "", dosis: "", frecuencia: "", d
  * Receta desde la ficha del paciente: el veterinario la escribe, revisa el PDF
  * y lo envía por WhatsApp o por correo. Queda en Tratamientos.
  */
-export function RecetaModal({ c, onClose, onEnviada }: { c: Cliente; onClose: () => void; onEnviada?: (r: Receta) => void }) {
+export function RecetaModal({
+  c,
+  mascotaInicial,
+  onClose,
+  onEnviada,
+}: {
+  c: Cliente;
+  mascotaInicial?: string;
+  onClose: () => void;
+  onEnviada?: (r: Receta) => void;
+}) {
   const { agregarReceta } = useStore();
-  const [mascota, setMascota] = useState(c.mascotas[0].nombre);
+  const [mascota, setMascota] = useState(mascotaInicial ?? c.mascotas[0].nombre);
   const [items, setItems] = useState<ItemReceta[]>([vacio()]);
   const [indicaciones, setIndicaciones] = useState("");
   const validos = items.filter((i) => i.medicamento.trim());
