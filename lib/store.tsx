@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { CONVERSACIONES, RECETAS, cliente } from "./seed";
-import type { Agenda, Conversacion, Mensaje, Receta } from "./types";
+import { CONVERSACIONES, NOTAS, RECETAS, RESUMENES, VISITAS, cliente } from "./seed";
+import type { Agenda, Conversacion, Mensaje, Nota, Receta, ResumenConsulta, Visita } from "./types";
 
 /** Filtro global: todo, solo clínica o solo grooming. */
 export type FiltroAgenda = "todas" | Agenda;
@@ -35,6 +35,14 @@ interface Estado {
   setConvSel: (id: string) => void;
   /** Id de la conversación del cliente; si no tiene, abre una nueva por su canal. */
   conversacionDe: (clienteId: string) => string;
+  /** Visitas atendidas (clínica y grooming), incluidas las que se registran al resumir una consulta. */
+  visitas: Visita[];
+  /** Resúmenes de consulta por id de visita. */
+  resumenes: Record<string, ResumenConsulta>;
+  /** Guarda el resumen; si la visita es nueva (consulta sin cita), la agrega al historial. */
+  guardarResumen: (visita: Visita, resumen: ResumenConsulta) => void;
+  notas: Nota[];
+  agregarNota: (n: Nota) => void;
 }
 
 const Ctx = createContext<Estado | null>(null);
@@ -149,6 +157,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const marcarLeida = useCallback((id: string) => editar(id, (c) => (c.noLeidos ? { ...c, noLeidos: 0 } : c)), [editar]);
 
+  // Historial clínico: visitas, resúmenes del veterinario y notas internas.
+  const [visitas, setVisitas] = useState<Visita[]>(VISITAS);
+  const [resumenes, setResumenes] = useState<Record<string, ResumenConsulta>>(RESUMENES);
+  const [notas, setNotas] = useState<Nota[]>(NOTAS);
+
+  const guardarResumen = useCallback((visita: Visita, resumen: ResumenConsulta) => {
+    setVisitas((vs) => (vs.some((v) => v.id === visita.id) ? vs : [visita, ...vs]));
+    setResumenes((r) => ({ ...r, [visita.id]: resumen }));
+  }, []);
+
+  const agregarNota = useCallback((n: Nota) => setNotas((ns) => [n, ...ns]), []);
+
   const conversacionDe = useCallback(
     (clienteId: string) => {
       const existente = conversaciones.find((c) => c.clienteId === clienteId);
@@ -176,7 +196,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ filtro, setFiltro, conversaciones, tomar, devolverAIA, resolver, enviar, marcarLeida, urgencias, agendarUrgencia, cerrarUrgencia, recetas, agregarReceta, calendario, setCalendario, convSel, setConvSel, conversacionDe }}
+      value={{ filtro, setFiltro, conversaciones, tomar, devolverAIA, resolver, enviar, marcarLeida, urgencias, agendarUrgencia, cerrarUrgencia, recetas, agregarReceta, calendario, setCalendario, convSel, setConvSel, conversacionDe, visitas, resumenes, guardarResumen, notas, agregarNota }}
     >
       {children}
     </Ctx.Provider>

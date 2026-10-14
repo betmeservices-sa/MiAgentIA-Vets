@@ -155,3 +155,42 @@ export interface Receta {
   fecha?: string;
   estado: EstadoReceta;
 }
+
+/** Resumen que escribe el veterinario al cerrar una consulta. Es interno: Luna no lo envía ni lo explica al cliente. */
+export interface ResumenConsulta {
+  motivo: string;
+  pesoKg?: string;
+  temperaturaC?: string;
+  hallazgos: string;
+  diagnostico: string;
+  tratamiento: string;
+  /** Texto legible: "En 7 días", "No requiere"… */
+  proximoControl: string;
+  autor: string;
+  /** Cuándo se escribió (texto de demo). */
+  escrito: string;
+}
+
+/** Visita atendida en clínica o grooming. */
+export interface Visita {
+  id: string;
+  clienteId: string;
+  mascota: string;
+  agenda: Agenda;
+  /** Fecha ISO (AAAA-MM-DD). */
+  fecha: string;
+  hora: string;
+  servicio: string;
+  atendio: string;
+}
+
+/** Nota interna sobre un paciente. */
+export interface Nota {
+  id: string;
+  clienteId: string;
+  texto: string;
+  /** Fecha ISO (AAAA-MM-DD). */
+  fecha: string;
+  hora: string;
+  autor: string;
+}

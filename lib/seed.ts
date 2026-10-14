@@ -7,7 +7,11 @@ import type {
   RangoInactividad,
   Reactivacion,
   Seguimiento,
+  Visita,
+  ResumenConsulta,
+  Nota,
 } from "./types";
+import { fechaDe, iso, isoDeTexto } from "./format";
 
 // Datos de demo de una clínica veterinaria ficticia en Guatemala. Todo lo que
 // el agente "sabe" sale de CONOCIMIENTO: es la información aprobada por la
@@ -538,3 +542,136 @@ export const RECETAS: Receta[] = [
 export function cliente(id: string): Cliente {
   return CLIENTES.find((c) => c.id === id)!;
 }
+
+// Historial de visitas. Las de semanas anteriores van a mano (con resumen
+// cuando fue consulta); las de hoy salen de las citas atendidas.
+const DR = STAFF.veterinario.nombre;
+const GROOMER = STAFF.groomer.nombre;
+
+const HISTORICAS: Visita[] = [
+  { id: "h1", clienteId: "c1", mascota: "Max", agenda: "clinica", fecha: "2026-03-05", hora: "10:00", servicio: "Vacuna múltiple", atendio: DR },
+  { id: "h2", clienteId: "c1", mascota: "Max", agenda: "clinica", fecha: "2026-08-12", hora: "09:30", servicio: "Consulta general", atendio: DR },
+  { id: "h3", clienteId: "c1", mascota: "Max", agenda: "grooming", fecha: "2026-06-18", hora: "08:00", servicio: "Baño (grande)", atendio: GROOMER },
+  { id: "h4", clienteId: "c1", mascota: "Max", agenda: "grooming", fecha: "2026-09-20", hora: "10:00", servicio: "Baño y corte (grande)", atendio: GROOMER },
+  { id: "h5", clienteId: "c3", mascota: "Coco", agenda: "clinica", fecha: "2026-09-03", hora: "15:00", servicio: "Consulta general", atendio: DR },
+  { id: "h6", clienteId: "c3", mascota: "Coco", agenda: "clinica", fecha: "2026-04-22", hora: "11:00", servicio: "Desparasitación", atendio: DR },
+  { id: "h7", clienteId: "c5", mascota: "Mishi", agenda: "clinica", fecha: "2026-09-18", hora: "16:00", servicio: "Consulta general", atendio: DR },
+  { id: "h8", clienteId: "c6", mascota: "Bruno", agenda: "clinica", fecha: "2026-10-03", hora: "10:30", servicio: "Consulta general", atendio: DR },
+  { id: "h9", clienteId: "c6", mascota: "Bruno", agenda: "clinica", fecha: "2026-05-14", hora: "09:00", servicio: "Vacuna múltiple", atendio: DR },
+  { id: "h10", clienteId: "c10", mascota: "Kira", agenda: "clinica", fecha: "2026-09-22", hora: "08:30", servicio: "Exámenes de sangre", atendio: DR },
+  { id: "h11", clienteId: "c13", mascota: "Firulais", agenda: "clinica", fecha: "2026-03-01", hora: "14:30", servicio: "Vacuna antirrábica", atendio: DR },
+  { id: "h12", clienteId: "c4", mascota: "Rocky", agenda: "grooming", fecha: "2026-08-02", hora: "08:00", servicio: "Baño (grande)", atendio: GROOMER },
+  { id: "h13", clienteId: "c4", mascota: "Luna", agenda: "grooming", fecha: "2026-08-02", hora: "10:00", servicio: "Baño (grande)", atendio: GROOMER },
+  { id: "h14", clienteId: "c4", mascota: "Thor", agenda: "grooming", fecha: "2026-08-02", hora: "12:00", servicio: "Baño (grande)", atendio: GROOMER },
+];
+
+// Para el resto de clientes, la última visita registrada en su perfil.
+const ULTIMAS: Visita[] = CLIENTES.flatMap((c) => {
+  const out: Visita[] = [];
+  const ya = (agenda: string) => HISTORICAS.some((h) => h.clienteId === c.id && h.agenda === agenda);
+  if (c.ultimaClinica && !ya("clinica"))
+    out.push({ id: `u${c.id}c`, clienteId: c.id, mascota: c.mascotas[0].nombre, agenda: "clinica", fecha: isoDeTexto(c.ultimaClinica), hora: "10:00", servicio: "Consulta general", atendio: DR });
+  if (c.ultimaGrooming && !ya("grooming"))
+    out.push({ id: `u${c.id}g`, clienteId: c.id, mascota: c.mascotas[0].nombre, agenda: "grooming", fecha: isoDeTexto(c.ultimaGrooming), hora: "08:00", servicio: "Baño (mediano)", atendio: GROOMER });
+  return out;
+});
+
+// Solo las de hoy: el resto de la semana es relleno del calendario.
+const ATENDIDAS: Visita[] = CITAS.filter((c) => c.dia === 0 && c.estado === "completada").map((c) => ({
+  id: `cita-${c.id}`,
+  clienteId: c.clienteId,
+  mascota: c.mascota,
+  agenda: c.agenda,
+  fecha: iso(fechaDe(c.dia)),
+  hora: c.hora,
+  servicio: c.servicio,
+  atendio: c.agenda === "clinica" ? DR : GROOMER,
+}));
+
+export const VISITAS: Visita[] = [...HISTORICAS, ...ULTIMAS, ...ATENDIDAS];
+
+/** Resúmenes de consulta ya escritos, por id de visita. */
+export const RESUMENES: Record<string, ResumenConsulta> = {
+  h2: {
+    motivo: "Se rasca mucho las orejas desde hace una semana.",
+    pesoKg: "32.4",
+    temperaturaC: "38.6",
+    hallazgos: "Enrojecimiento leve en pabellón auricular izquierdo, sin secreción ni mal olor.",
+    diagnostico: "Dermatitis alérgica leve",
+    tratamiento: "Shampoo medicado 2 veces por semana. Cambio a alimento con proteína hidrolizada.",
+    proximoControl: "En 30 días",
+    autor: DR,
+    escrito: "12 ago 2026 · 10:05",
+  },
+  h1: {
+    motivo: "Refuerzo anual de vacuna múltiple.",
+    pesoKg: "31.8",
+    temperaturaC: "38.4",
+    hallazgos: "Paciente sano, buena condición corporal.",
+    diagnostico: "Sano",
+    tratamiento: "Vacuna múltiple aplicada.",
+    proximoControl: "Refuerzo en 12 meses",
+    autor: DR,
+    escrito: "5 mar 2026 · 10:20",
+  },
+  h5: {
+    motivo: "Chequeo anual.",
+    pesoKg: "11.2",
+    temperaturaC: "38.5",
+    hallazgos: "Sin hallazgos relevantes. Dientes con sarro leve.",
+    diagnostico: "Sano",
+    tratamiento: "Recomendada limpieza dental en los próximos meses.",
+    proximoControl: "En 12 meses",
+    autor: DR,
+    escrito: "3 sep 2026 · 15:30",
+  },
+  h7: {
+    motivo: "Pérdida de pelo en el lomo y rascado.",
+    pesoKg: "4.1",
+    temperaturaC: "38.9",
+    hallazgos: "Zonas de alopecia con descamación en región lumbar.",
+    diagnostico: "Dermatitis (en estudio)",
+    tratamiento: "Tratamiento tópico por 14 días. Control para evaluar evolución.",
+    proximoControl: "En 7 días",
+    autor: DR,
+    escrito: "18 sep 2026 · 16:25",
+  },
+  h8: {
+    motivo: "Cojea de la pata trasera derecha desde hace 2 días.",
+    pesoKg: "12.7",
+    temperaturaC: "38.7",
+    hallazgos: "Dolor a la manipulación de rodilla derecha. Sin inestabilidad evidente.",
+    diagnostico: "Esguince leve de rodilla (descartar lesión de ligamento si no mejora)",
+    tratamiento: "Antiinflamatorio 7 días, condroprotector 30 días. Reposo 10 días.",
+    proximoControl: "En 4 días (seguimiento por WhatsApp)",
+    autor: DR,
+    escrito: "3 oct 2026 · 11:00",
+  },
+  h10: {
+    motivo: "Exámenes de rutina por edad (8 años).",
+    pesoKg: "29.5",
+    hallazgos: "Hemograma y química sanguínea dentro de rangos normales.",
+    diagnostico: "Sana",
+    tratamiento: "Sin tratamiento.",
+    proximoControl: "En 14 días",
+    autor: DR,
+    escrito: "22 sep 2026 · 12:10",
+  },
+  "cita-a1": {
+    motivo: "Sacude la cabeza y tiene mal olor en los oídos.",
+    pesoKg: "14.3",
+    temperaturaC: "38.8",
+    hallazgos: "Secreción café en ambos oídos, conducto enrojecido.",
+    diagnostico: "Otitis externa bilateral",
+    tratamiento: "Gotas óticas 7 días y antiinflamatorio 5 días. Limpieza de oídos antes de cada aplicación.",
+    proximoControl: "En 7 días",
+    autor: DR,
+    escrito: "Hoy · 09:05",
+  },
+};
+
+export const NOTAS: Nota[] = [
+  { id: "n1", clienteId: "c1", texto: "Prefiere citas temprano por la mañana. Max se pone nervioso con otros perros en sala de espera.", fecha: "2026-08-12", hora: "10:10", autor: "Recepción" },
+  { id: "n2", clienteId: "c6", texto: "Pidió que le llamen antes de las 5 pm.", fecha: "2026-10-03", hora: "11:05", autor: "Recepción" },
+  { id: "n3", clienteId: "c4", texto: "Trae a los 3 perros juntos. Consultó por descuento: lo autoriza la clínica.", fecha: "2026-08-02", hora: "07:50", autor: "Recepción" },
+];

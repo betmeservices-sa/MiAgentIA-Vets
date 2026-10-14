@@ -6,7 +6,6 @@ import { CheckCircle2, FileText, MessageCircle, PawPrint, Search, Sparkles, User
 import { cn } from "@/lib/cn";
 import { CLIENTES } from "@/lib/seed";
 import { useStore } from "@/lib/store";
-import { PerfilCliente } from "@/components/PerfilCliente";
 import { Avatar, Card, ChannelBadge, MetricCard, PageHeader } from "@/components/ui";
 
 type Filtro = "todos" | "nuevos";
@@ -14,14 +13,12 @@ type Filtro = "todos" | "nuevos";
 export default function PacientesPage() {
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [q, setQ] = useState("");
-  const [abierto, setAbierto] = useState<string | null>(null);
   const { recetas, conversacionDe, setConvSel } = useStore();
   const router = useRouter();
   const abrirConversacion = (clienteId: string) => {
     setConvSel(conversacionDe(clienteId));
     router.push("/");
   };
-  const perfil = CLIENTES.find((c) => c.id === abierto);
   // Perfiles que recepción ya revisó (en el demo vive solo en esta pantalla).
   const [revisados, setRevisados] = useState<Set<string>>(new Set());
 
@@ -53,10 +50,9 @@ export default function PacientesPage() {
           <MetricCard Icon={CheckCircle2} valor={pendientes} label="Perfiles por revisar" hint="Recepción confirma los datos" tono={pendientes ? "alerta" : undefined} />
         </div>
 
-        <div className={cn("grid gap-5", perfil && "xl:grid-cols-[minmax(0,1fr)_420px]")}>
         <Card
           title="Perfiles"
-          sub="Haz clic en un paciente para ver su perfil y su historial de recetas"
+          sub="Haz clic en un paciente para abrir su ficha: actividad, historial clínico y recetas"
           action={
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1.5">
@@ -89,7 +85,7 @@ export default function PacientesPage() {
                 {lista.map((c) => {
                   const pend = porRevisar(c.id);
                   return (
-                    <tr key={c.id} onClick={() => setAbierto(c.id)} className={cn("cursor-pointer hover:bg-surface", pend && "bg-violet-50/40", abierto === c.id && "bg-brand/5")}>
+                    <tr key={c.id} onClick={() => router.push(`/pacientes/${c.id}`)} className={cn("cursor-pointer hover:bg-surface", pend && "bg-violet-50/40")}>
                       <td className="py-2.5 pr-3">
                         <div className="flex items-center gap-2.5">
                           <Avatar nombre={c.nombre} size={32} />
@@ -147,12 +143,6 @@ export default function PacientesPage() {
             </table>
           </div>
         </Card>
-        {perfil && (
-          <div className="xl:sticky xl:top-0 xl:self-start">
-            <PerfilCliente c={perfil} onCerrar={() => setAbierto(null)} />
-          </div>
-        )}
-        </div>
 
         <Card title="Cómo crea Luna un perfil" sub="Solo por WhatsApp y solo cuando el número no está en la base de la clínica">
           <ol className="grid gap-3 text-[13px] text-[var(--text-2)] sm:grid-cols-2 lg:grid-cols-4">

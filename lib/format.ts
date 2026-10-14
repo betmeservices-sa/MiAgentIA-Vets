@@ -57,3 +57,45 @@ export function horaDe(min: number) {
 export function pct(a: number, b: number) {
   return b === 0 ? 0 : Math.round((a / b) * 100);
 }
+
+const MESES_LARGOS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+/** Fecha local a ISO (AAAA-MM-DD) sin pasar por UTC. */
+export function iso(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** "12 ago 2026" u "Hoy" → ISO. Si no se entiende, devuelve hoy. */
+export function isoDeTexto(texto: string | undefined): string {
+  const m = texto?.trim().match(/^(\d{1,2}) (\w{3})\w* (\d{4})$/);
+  if (!m) return iso(fechaDe(0));
+  const mes = MESES.indexOf(m[2].toLowerCase());
+  return `${m[3]}-${String(mes + 1).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+}
+
+function deIso(f: string): Date {
+  const [a, m, d] = f.split("-").map(Number);
+  return new Date(a, m - 1, d);
+}
+
+/** "Hoy", "Ayer" o "12 ago 2026". */
+export function fechaLegible(f: string): string {
+  const dias = Math.round((deIso(f).getTime() - fechaDe(0).getTime()) / 86400000);
+  if (dias === 0) return "Hoy";
+  if (dias === -1) return "Ayer";
+  if (dias === 1) return "Mañana";
+  const d = deIso(f);
+  return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** "Octubre 2026" para agrupar por mes. */
+export function mesLegible(f: string): string {
+  const d = deIso(f);
+  const m = MESES_LARGOS[d.getMonth()];
+  return `${m[0].toUpperCase()}${m.slice(1)} ${d.getFullYear()}`;
+}
+
+/** Días transcurridos desde la fecha (positivo = pasado). */
+export function diasDesde(f: string): number {
+  return Math.round((fechaDe(0).getTime() - deIso(f).getTime()) / 86400000);
+}
