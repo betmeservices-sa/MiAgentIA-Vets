@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   BarChart3,
   BellRing,
   CalendarDays,
@@ -22,7 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { AGENDA_INFO, etiquetaDia } from "@/lib/format";
+import { AGENDA_INFO, etiquetaDia, MOTIVO } from "@/lib/format";
 import { CITAS, CLINICA, cliente } from "@/lib/seed";
 import { StoreProvider, useStore } from "@/lib/store";
 import type { Agenda } from "@/lib/types";
@@ -127,12 +128,13 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
   );
 }
 
-// Próximos recordatorios de cita (hoy, mañana y pasado) en un dropdown.
+// Dropdown de recordatorios: conversaciones que esperan a la clínica (con la
+// burbuja roja) y los recordatorios de cita de hoy, mañana y pasado.
 function Recordatorios() {
   const [abierto, setAbierto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { conversacionDe, setConvSel } = useStore();
+  const { conversacionDe, setConvSel, conversaciones } = useStore();
 
   useEffect(() => {
     if (!abierto) return;
@@ -150,6 +152,15 @@ function Recordatorios() {
 
   const proximas = CITAS.filter((c) => c.dia >= 0 && c.dia <= 2 && c.estado !== "completada").sort((a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora));
   const pendientes = proximas.filter((c) => c.estado === "por_confirmar").length;
+  // Primero las urgencias, luego las que llevan más tiempo esperando.
+  const esperando = conversaciones
+    .filter((c) => c.estado === "transferida")
+    .sort((a, b) => Number(b.motivo === "urgencia") - Number(a.motivo === "urgencia") || (b.esperaMin ?? 0) - (a.esperaMin ?? 0));
+  const abrir = (id: string) => {
+    setConvSel(id);
+    setAbierto(false);
+    router.push("/");
+  };
 
   return (
     <div ref={ref} className="relative">
@@ -165,19 +176,56 @@ function Recordatorios() {
         <BellRing size={16} />
         <span className="hidden md:inline">Recordatorios</span>
         <ChevronDown size={14} className={cn("hidden transition md:block", abierto && "rotate-180")} />
-        {pendientes > 0 && (
-          <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10.5px] font-bold text-white" title={`${pendientes} por confirmar`}>
-            {pendientes}
+        {esperando.length > 0 && (
+          <span
+            className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#dc2626] px-1 text-[10.5px] font-bold text-white ring-2 ring-card"
+            title={`${esperando.length} conversaciones esperan a la clínica`}
+          >
+            {esperando.length}
           </span>
         )}
       </button>
       {abierto && (
-        <div className="absolute right-0 z-40 mt-2 w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-line bg-card shadow-xl">
+        <div className="absolute right-0 z-40 mt-2 max-h-[80vh] w-[min(380px,calc(100vw-24px))] overflow-y-auto rounded-2xl border border-line bg-card shadow-xl">
+          {esperando.length > 0 && (
+            <div className="border-b border-line">
+              <div className="flex items-center justify-between bg-rose-50 px-4 py-3">
+                <p className="flex items-center gap-1.5 text-[14px] font-bold text-rose-800">
+                  <AlertTriangle size={15} /> Esperan a la clínica
+                </p>
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#dc2626] px-1.5 text-[11px] font-bold text-white">{esperando.length}</span>
+              </div>
+              <div className="divide-y divide-line">
+                {esperando.map((c) => {
+                  const cli = cliente(c.clienteId);
+                  const ultimo = [...c.mensajes].reverse().find((m) => m.autor === "cliente");
+                  return (
+                    <button key={c.id} type="button" onClick={() => abrir(c.id)} className="flex w-full items-start gap-3 px-4 py-2.5 text-left hover:bg-surface" title="Abrir la conversación">
+                      <span className="relative mt-0.5 shrink-0">
+                        <Avatar nombre={cli.nombre} size={32} />
+                        {c.noLeidos > 0 && (
+                          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#dc2626] px-1 text-[9.5px] font-bold text-white ring-2 ring-card">{c.noLeidos}</span>
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="truncate text-[13px] font-semibold">{cli.nombre}</span>
+                          <span className="shrink-0 text-[11.5px] text-[var(--text-3)]">{c.esperaMin} min</span>
+                        </span>
+                        {ultimo && <span className="block truncate text-[12px] text-[var(--text-2)]">{ultimo.texto}</span>}
+                        {c.motivo && <span className={cn("mt-1 inline-block rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold", MOTIVO[c.motivo].className)}>{MOTIVO[c.motivo].label}</span>}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="border-b border-line px-4 py-3">
             <p className="text-[14px] font-bold">Recordatorios de cita</p>
             <p className="text-[12px] text-[var(--text-3)]">Hoy, mañana y pasado · {pendientes} por confirmar</p>
           </div>
-          <div className="max-h-[60vh] divide-y divide-line overflow-y-auto">
+          <div className="divide-y divide-line">
             {proximas.map((c) => (
               <button
                 key={c.id}

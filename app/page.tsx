@@ -90,7 +90,6 @@ export default function BandejaPage() {
 
   // Si los filtros dejan fuera la conversación abierta, se muestra la primera de la lista.
   const actual = lista.find((c) => c.id === sel) ?? lista[0];
-  const urgentes = conversaciones.filter((c) => c.estado === "transferida");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -101,21 +100,6 @@ export default function BandejaPage() {
         </div>
         <FiltroAgendaToggle />
       </header>
-
-      {urgentes.length > 0 && (
-        <button
-          type="button"
-          onClick={() => {
-            setTab("urgencia");
-            setPrio("todas");
-          }}
-          className="flex items-center gap-2 border-b border-rose-200 bg-rose-50 px-5 py-2 text-left text-[13px] text-rose-800 hover:bg-rose-100"
-        >
-          <AlertTriangle size={15} />
-          <span className="font-semibold">{urgentes.length} conversaciones esperan a la clínica.</span>
-          <span className="hidden sm:inline">Ver urgencias →</span>
-        </button>
-      )}
 
       <div className="flex min-h-0 flex-1">
         {/* Lista */}
