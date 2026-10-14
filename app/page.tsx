@@ -39,10 +39,10 @@ function prioridad(c: Conversacion): Prioridad {
   return "baja";
 }
 
-const PRIORIDAD: Record<Prioridad, { label: string; punto: string; className: string }> = {
-  alta: { label: "Alta", punto: "bg-rose-500", className: "bg-rose-50 text-rose-700" },
-  media: { label: "Media", punto: "bg-amber-500", className: "bg-amber-50 text-amber-700" },
-  baja: { label: "Baja", punto: "bg-emerald-500", className: "bg-emerald-50 text-emerald-700" },
+const PRIORIDAD: Record<Prioridad, { label: string; punto: string }> = {
+  alta: { label: "Alta", punto: "bg-rose-500" },
+  media: { label: "Media", punto: "bg-amber-500" },
+  baja: { label: "Baja", punto: "bg-emerald-500" },
 };
 
 const OBJETIVO: Record<Objetivo, { label: string; Icon: typeof Bot }> = {
@@ -153,30 +153,35 @@ export default function BandejaPage() {
               </div>
             </div>
 
-            <div>
-              <p className="mb-1 text-[10.5px] font-bold uppercase tracking-wider text-[var(--text-3)]">Prioridad</p>
-              <div className="grid grid-cols-4 gap-1">
-                {(["todas", "alta", "media", "baja"] as const).map((p) => {
-                  const on = prio === p;
-                  const n = enAgenda.filter((c) => enTab(c, tab) && pasaCanal(c) && pasaPrio(c, p)).length;
-                  return (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setPrio(p)}
-                      aria-pressed={on}
-                      className={cn(
-                        "flex items-center justify-center gap-1 rounded-lg border px-1 py-1.5 text-[11.5px] font-semibold transition",
-                        on ? "border-brand bg-brand/10 text-brand" : "border-line text-[var(--text-2)] hover:bg-surface",
-                      )}
-                    >
-                      {p !== "todas" && <span className={cn("h-2 w-2 rounded-full", PRIORIDAD[p].punto)} />}
-                      {p === "todas" ? "Todas" : PRIORIDAD[p].label}
-                      <span className="opacity-60">{n}</span>
-                    </button>
-                  );
-                })}
-              </div>
+            {/* Prioridad: filtro discreto; tocar de nuevo lo quita. */}
+            <div className="flex items-center gap-1 text-[11px]">
+              <span className="mr-0.5 text-[var(--text-3)]">Prioridad</span>
+              {(["alta", "media", "baja"] as const).map((p) => {
+                const on = prio === p;
+                const n = enAgenda.filter((c) => enTab(c, tab) && pasaCanal(c) && pasaPrio(c, p)).length;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPrio(on ? "todas" : p)}
+                    aria-pressed={on}
+                    title={on ? "Quitar filtro" : `Solo prioridad ${PRIORIDAD[p].label.toLowerCase()}`}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-semibold transition",
+                      on ? "bg-[var(--text)] text-white" : "text-[var(--text-2)] hover:bg-surface",
+                    )}
+                  >
+                    <span className={cn("h-1.5 w-1.5 rounded-full", PRIORIDAD[p].punto)} />
+                    {PRIORIDAD[p].label}
+                    <span className="opacity-60">{n}</span>
+                  </button>
+                );
+              })}
+              {prio !== "todas" && (
+                <button type="button" onClick={() => setPrio("todas")} className="ml-auto font-semibold text-brand hover:underline">
+                  Ver todas
+                </button>
+              )}
             </div>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -209,7 +214,10 @@ function Item({ c, activa, onClick }: { c: Conversacion; activa: boolean; onClic
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-semibold">{quien}</p>
+          <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold">
+            <span className={cn("h-2 w-2 shrink-0 rounded-full", PRIORIDAD[prioridad(c)].punto)} title={`Prioridad ${PRIORIDAD[prioridad(c)].label.toLowerCase()}`} aria-label={`Prioridad ${PRIORIDAD[prioridad(c)].label.toLowerCase()}`} />
+            <span className="truncate">{quien}</span>
+          </p>
           <span className="shrink-0 text-[11px] text-[var(--text-3)]">{c.hora}</span>
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">
@@ -217,10 +225,6 @@ function Item({ c, activa, onClick }: { c: Conversacion; activa: boolean; onClic
           {c.noLeidos > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-accent)] px-1.5 text-[11px] font-bold text-white">{c.noLeidos}</span>}
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] font-bold", PRIORIDAD[prioridad(c)].className)}>
-            <span className={cn("h-1.5 w-1.5 rounded-full", PRIORIDAD[prioridad(c)].punto)} />
-            {PRIORIDAD[prioridad(c)].label}
-          </span>
           {c.agenda && <AgendaPill agenda={c.agenda} />}
           <ObjetivoTag c={c} />
           {c.contacto && (

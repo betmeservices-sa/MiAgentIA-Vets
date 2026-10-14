@@ -23,11 +23,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { AGENDA_INFO, etiquetaDia } from "@/lib/format";
+import { AGENDA_INFO } from "@/lib/format";
 import { CITAS, CLINICA, cliente } from "@/lib/seed";
 import { StoreProvider, useStore } from "@/lib/store";
 import type { Agenda } from "@/lib/types";
-import { AgendaPill, Avatar, EstadoCitaPill } from "./ui";
+import { Avatar } from "./ui";
 
 interface NavItem {
   href: string;
@@ -121,9 +121,8 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end">
         <Urgencias />
-        <Recordatorios />
       </div>
     </div>
   );
@@ -264,74 +263,12 @@ function Urgencias() {
   );
 }
 
-// Recordatorios de cita según el calendario: hoy, mañana y pasado.
-function Recordatorios() {
-  const { abierto, setAbierto, ref } = useDropdown();
-  const router = useRouter();
-  const { conversacionDe, setConvSel } = useStore();
-  const proximas = CITAS.filter((c) => c.dia >= 0 && c.dia <= 2 && c.estado !== "completada").sort((a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora));
-  const pendientes = proximas.filter((c) => c.estado === "por_confirmar").length;
-
-  return (
-    <div ref={ref} className="relative">
-      <BotonAviso
-        abierto={abierto}
-        onClick={() => setAbierto((a) => !a)}
-        Icon={BellRing}
-        label="Recordatorios"
-        n={pendientes}
-        color="#f59e0b"
-        titulo={`${pendientes} citas por confirmar`}
-        tono="neutro"
-      />
-      {abierto && (
-        <div className="absolute right-0 z-40 mt-2 w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-line bg-card shadow-xl">
-          <div className="border-b border-line px-4 py-3">
-            <p className="text-[14px] font-bold">Recordatorios de cita</p>
-            <p className="text-[12px] text-[var(--text-3)]">Hoy, mañana y pasado · {pendientes} por confirmar</p>
-          </div>
-          <div className="max-h-[60vh] divide-y divide-line overflow-y-auto">
-            {proximas.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => {
-                  setConvSel(conversacionDe(c.clienteId));
-                  setAbierto(false);
-                  router.push("/");
-                }}
-                className="flex w-full items-start gap-3 px-4 py-2.5 text-left hover:bg-surface"
-                title="Abrir la conversación con el cliente"
-              >
-                <div className="w-[68px] shrink-0 text-[12px] leading-tight">
-                  <p className="font-bold">{etiquetaDia(c.dia)}</p>
-                  <p className="text-[var(--text-3)]">{c.hora}</p>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-semibold">
-                    {c.mascota} <span className="font-normal text-[var(--text-3)]">· {cliente(c.clienteId).nombre}</span>
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <AgendaPill agenda={c.agenda} />
-                    <EstadoCitaPill estado={c.estado} />
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-          <Link href="/recordatorios" onClick={() => setAbierto(false)} className="block border-t border-line px-4 py-2.5 text-center text-[12.5px] font-semibold text-brand hover:bg-surface">
-            Ver todos los recordatorios
-          </Link>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const { conversaciones } = useStore();
   const transferidas = conversaciones.filter((c) => c.estado === "transferida").length;
+  // Citas de hoy a pasado mañana que siguen sin confirmar (burbuja naranja).
+  const porConfirmar = CITAS.filter((c) => c.dia >= 0 && c.dia <= 2 && c.estado === "por_confirmar").length;
   const enMarketing = MARKETING.some((a) => activo(pathname, a.href));
   const [marketingAbierto, setMarketingAbierto] = useState(true);
 
@@ -369,6 +306,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
 
       <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
         <NavLink href="/" label="Bandeja" Icon={Inbox} activo={activo(pathname, "/")} aviso={transferidas} onClick={onClose} />
+        <NavLink href="/recordatorios" label="Recordatorios" Icon={BellRing} activo={activo(pathname, "/recordatorios")} aviso={porConfirmar} avisoColor="#f59e0b" onClick={onClose} />
 
         <button
           type="button"
@@ -430,9 +368,10 @@ function NavLink({
   Icon,
   activo: a,
   aviso = 0,
+  avisoColor = "#dc2626",
   onClick,
   compacto,
-}: NavItem & { activo: boolean; aviso?: number; onClick: () => void; compacto?: boolean }) {
+}: NavItem & { activo: boolean; aviso?: number; avisoColor?: string; onClick: () => void; compacto?: boolean }) {
   return (
     <Link
       href={href}
@@ -446,7 +385,10 @@ function NavLink({
       <Icon size={compacto ? 16 : 18} strokeWidth={2.1} />
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {aviso > 0 && (
-        <span className={cn("flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10.5px] font-bold", a ? "bg-white/25 text-white" : "bg-[#dc2626] text-white")}>
+        <span
+          className={cn("flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10.5px] font-bold text-white", a && "bg-white/25")}
+          style={a ? undefined : { backgroundColor: avisoColor }}
+        >
           {aviso}
         </span>
       )}

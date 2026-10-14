@@ -192,7 +192,6 @@ function Dueno({ c, acciones }: { c: Cliente; acciones: Acciones }) {
             { label: "Agendar en veterinaria", onClick: () => acciones.agendar("clinica") },
             { label: "Agendar en grooming", onClick: () => acciones.agendar("grooming") },
             { label: "Enviar correo", href: `mailto:${c.correo}` },
-            { label: "Llamar", href: `tel:${tel}` },
             { label: "Agregar nota", onClick: acciones.nota },
           ]}
         />
