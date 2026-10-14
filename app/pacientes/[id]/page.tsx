@@ -16,6 +16,7 @@ import {
   NotebookPen,
   PawPrint,
   Phone,
+  Pill,
   Plus,
   Scissors,
   Search,
@@ -23,8 +24,8 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { AGENDA_INFO, etiquetaDia, fechaLegible, isoDeTexto, mesLegible } from "@/lib/format";
-import { CITAS, CLIENTES } from "@/lib/seed";
+import { AGENDA_INFO, etiquetaDia, fechaLegible, isoDeTexto, mesLegible, recetaEnCurso } from "@/lib/format";
+import { CITAS, CLIENTES, STAFF } from "@/lib/seed";
 import { useStore } from "@/lib/store";
 import type { Agenda, Cliente, Conversacion, Nota, Receta, Visita } from "@/lib/types";
 import { AgendaPill, Avatar, ChannelBadge, EstadoCitaPill } from "@/components/ui";
@@ -53,7 +54,7 @@ function Ficha({ c }: { c: Cliente }) {
   const router = useRouter();
   const { conversacionDe, setConvSel, setCalendario, visitas, conversaciones } = useStore();
   const [modal, setModal] = useState<Modal>(null);
-  const [tab, setTab] = useState<"resumen" | "actividad" | "historial">("actividad");
+  const [tab, setTab] = useState<Tab>("overview");
 
   const suyas = useMemo(() => visitas.filter((v) => v.clienteId === c.id), [visitas, c.id]);
   const conv = conversaciones.find((x) => x.clienteId === c.id);
@@ -144,6 +145,15 @@ function Contacto({ c, conv, visitas, acciones }: { c: Cliente; conv?: Conversac
           <Copiable valor={c.telefono} href={`tel:${c.telefono.replace(/\s/g, "")}`} />
         </div>
 
+        <button
+          type="button"
+          onClick={acciones.abrirConversacion}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2.5 text-[13.5px] font-bold text-white shadow-sm shadow-brand/25 hover:bg-brand-dark"
+        >
+          <MessageCircle size={16} /> Chat con {c.nombre.split(" ")[0]}
+          <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold">{c.canal === "whatsapp" ? "WhatsApp" : c.canal === "instagram" ? "Instagram" : "Facebook"}</span>
+        </button>
+
         <div className="mt-4 grid grid-cols-6 gap-1">
           {rapidas.map(({ label, Icon, onClick, href }) => {
             const contenido = (
@@ -162,6 +172,8 @@ function Contacto({ c, conv, visitas, acciones }: { c: Cliente; conv?: Conversac
           })}
         </div>
       </section>
+
+      <ResumenCliente c={c} visitas={visitas} />
 
       <section className="rounded-2xl border border-line bg-card shadow-sm">
         <button type="button" onClick={() => setAbierto((a) => !a)} className="flex w-full items-center gap-2 px-4 py-3 text-left">
@@ -194,6 +206,72 @@ function Contacto({ c, conv, visitas, acciones }: { c: Cliente; conv?: Conversac
         )}
       </section>
     </>
+  );
+}
+
+/** Resumen del cliente en pocas líneas, armado con su historial. */
+function ResumenCliente({ c, visitas }: { c: Cliente; visitas: Visita[] }) {
+  const { recetas, resumenes } = useStore();
+  const [abierto, setAbierto] = useState(true);
+  const orden = [...visitas].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.hora.localeCompare(a.hora));
+  const primera = orden[orden.length - 1];
+  const ultima = orden[0];
+  const conResumen = orden.find((v) => resumenes[v.id]);
+  const proxima = CITAS.filter((x) => x.clienteId === c.id && x.dia >= 0 && !["completada", "cancelada", "reagendada"].includes(x.estado)).sort(
+    (a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora),
+  )[0];
+  const enCurso = recetas.filter((r) => r.clienteId === c.id && recetaEnCurso(r));
+  const nClinica = visitas.filter((v) => v.agenda === "clinica").length;
+  const nGrooming = visitas.filter((v) => v.agenda === "grooming").length;
+
+  const puntos: ReactNode[] = [
+    primera ? <>Cliente desde <b>{mesLegible(primera.fecha).toLowerCase()}</b>.</> : <>Cliente nuevo, todavía sin visitas.</>,
+    nClinica + nGrooming > 0 && (
+      <>
+        <b>{nClinica}</b> {nClinica === 1 ? "visita" : "visitas"} a clínica y <b>{nGrooming}</b> a grooming.
+      </>
+    ),
+    ultima && (
+      <>
+        Última visita: <b>{fechaLegible(ultima.fecha)}</b>, {ultima.servicio.toLowerCase()} de {ultima.mascota}.
+      </>
+    ),
+    conResumen && (
+      <>
+        Último diagnóstico ({conResumen.mascota}): <b>{resumenes[conResumen.id].diagnostico}</b>.
+      </>
+    ),
+    enCurso.length > 0 && (
+      <>
+        En tratamiento: <b>{enCurso.flatMap((r) => r.items.map((i) => i.medicamento.split(" (")[0])).join(", ")}</b>.
+      </>
+    ),
+    proxima ? (
+      <>
+        Próxima cita: <b>{etiquetaDia(proxima.dia).toLowerCase()} {proxima.hora}</b>, {proxima.servicio.toLowerCase()} ({AGENDA_INFO[proxima.agenda].label.toLowerCase()}).
+      </>
+    ) : (
+      <>Sin citas próximas.</>
+    ),
+  ].filter(Boolean);
+
+  return (
+    <section className="rounded-2xl border border-line bg-card shadow-sm">
+      <button type="button" onClick={() => setAbierto((a) => !a)} className="flex w-full items-center gap-2 px-4 py-3 text-left">
+        <ChevronDown size={16} className={cn("transition", !abierto && "-rotate-90")} />
+        <span className="text-[14px] font-bold">Resumen del cliente</span>
+      </button>
+      {abierto && (
+        <ul className="space-y-1.5 border-t border-line px-4 py-3 text-[13px] leading-snug text-[var(--text-2)]">
+          {puntos.map((p, i) => (
+            <li key={i} className="flex gap-2">
+              <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+              <span>{p}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -232,25 +310,14 @@ function Copiable({ valor, href }: { valor: string; href: string }) {
 
 /* ---------- Columna central ---------- */
 
-const TABS = [
-  { id: "resumen", label: "Resumen" },
+type Tab = "overview" | "tratamientos" | "actividad";
+const TABS: { id: Tab; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "tratamientos", label: "Tratamientos" },
   { id: "actividad", label: "Actividad" },
-  { id: "historial", label: "Historial clínico" },
-] as const;
+];
 
-function Centro({
-  c,
-  tab,
-  setTab,
-  visitas,
-  acciones,
-}: {
-  c: Cliente;
-  tab: "resumen" | "actividad" | "historial";
-  setTab: (t: "resumen" | "actividad" | "historial") => void;
-  visitas: Visita[];
-  acciones: Acciones;
-}) {
+function Centro({ c, tab, setTab, visitas, acciones }: { c: Cliente; tab: Tab; setTab: (t: Tab) => void; visitas: Visita[]; acciones: Acciones }) {
   return (
     <section className="rounded-2xl border border-line bg-card shadow-sm">
       <div className="grid grid-cols-3 border-b border-line">
@@ -269,54 +336,53 @@ function Centro({
         ))}
       </div>
       <div className="p-4">
-        {tab === "resumen" && <TabResumen c={c} visitas={visitas} acciones={acciones} irA={setTab} />}
+        {tab === "overview" && <TabOverview c={c} visitas={visitas} acciones={acciones} irA={setTab} />}
+        {tab === "tratamientos" && <TabTratamientos c={c} />}
         {tab === "actividad" && <TabActividad c={c} visitas={visitas} acciones={acciones} />}
-        {tab === "historial" && <TabHistorial c={c} visitas={visitas} acciones={acciones} />}
       </div>
     </section>
   );
 }
 
-/* Resumen */
+/* Overview */
 
-function TabResumen({ c, visitas, acciones, irA }: { c: Cliente; visitas: Visita[]; acciones: Acciones; irA: (t: "actividad" | "historial") => void }) {
-  const { recetas, resumenes, notas } = useStore();
-  const clinica = visitas.filter((v) => v.agenda === "clinica").sort((a, b) => b.fecha.localeCompare(a.fecha) || b.hora.localeCompare(a.hora));
-  const grooming = visitas.filter((v) => v.agenda === "grooming");
-  const ultimaConResumen = clinica.find((v) => resumenes[v.id]);
+function TabOverview({ c, visitas, acciones, irA }: { c: Cliente; visitas: Visita[]; acciones: Acciones; irA: (t: Tab) => void }) {
+  const { recetas, notas } = useStore();
+  const enCurso = recetas.filter((r) => r.clienteId === c.id && recetaEnCurso(r));
   const susNotas = notas.filter((n) => n.clienteId === c.id);
-  const susRecetas = recetas.filter((r) => r.clienteId === c.id);
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Cifra Icon={Stethoscope} valor={clinica.length} label="Visitas a clínica" color="var(--clinica)" />
-        <Cifra Icon={Scissors} valor={grooming.length} label="Visitas a grooming" color="var(--grooming)" />
-        <Cifra Icon={FileText} valor={susRecetas.length} label="Recetas" color="var(--brand-blue)" />
-        <Cifra Icon={NotebookPen} valor={susNotas.length} label="Notas" color="var(--text-2)" />
+        <Cifra Icon={Stethoscope} valor={visitas.filter((v) => v.agenda === "clinica").length} label="Visitas a clínica" color="var(--clinica)" />
+        <Cifra Icon={Scissors} valor={visitas.filter((v) => v.agenda === "grooming").length} label="Visitas a grooming" color="var(--grooming)" />
+        <Cifra Icon={Pill} valor={enCurso.length} label="Tratamientos en curso" color="var(--brand-blue)" onClick={() => irA("tratamientos")} />
+        <Cifra Icon={NotebookPen} valor={susNotas.length} label="Notas" color="var(--text-2)" onClick={() => irA("actividad")} />
       </div>
 
-      <div className="rounded-xl border border-line p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[14px] font-bold">Último resumen de consulta</p>
-          <button type="button" onClick={() => acciones.resumir()} className="inline-flex items-center gap-1 rounded-lg bg-[var(--clinica)] px-2.5 py-1.5 text-[12.5px] font-bold text-white hover:opacity-90">
-            <ClipboardPen size={14} /> Resumir consulta
-          </button>
+      <UltimasVisitas c={c} visitas={visitas} acciones={acciones} />
+
+      {enCurso.length > 0 && (
+        <div className="rounded-xl border border-line p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-[14px] font-bold">Tratamientos en curso</p>
+            <button type="button" onClick={() => irA("tratamientos")} className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
+              Ver tratamientos <ChevronRight size={14} />
+            </button>
+          </div>
+          <ul className="mt-2 space-y-1.5 text-[13px]">
+            {enCurso.flatMap((r) =>
+              r.items.map((i) => (
+                <li key={r.id + i.medicamento} className="flex flex-wrap items-center gap-x-2">
+                  <Pill size={13} className="text-[var(--text-3)]" />
+                  <b>{i.medicamento}</b>
+                  <span className="text-[var(--text-2)]">· {r.mascota} · {i.frecuencia} · {i.duracion}</span>
+                </li>
+              )),
+            )}
+          </ul>
         </div>
-        {ultimaConResumen ? (
-          <>
-            <p className="mt-1 text-[12.5px] text-[var(--text-3)]">
-              {ultimaConResumen.mascota} · {ultimaConResumen.servicio} · {fechaLegible(ultimaConResumen.fecha)}
-            </p>
-            <ResumenBloque r={resumenes[ultimaConResumen.id]} className="mt-3" />
-          </>
-        ) : (
-          <p className="mt-2 text-[13px] text-[var(--text-3)]">Todavía no hay consultas resumidas.</p>
-        )}
-        <button type="button" onClick={() => irA("historial")} className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
-          Ver historial clínico completo <ChevronRight size={14} />
-        </button>
-      </div>
+      )}
 
       <div className="rounded-xl border border-line p-4">
         <div className="flex items-center justify-between">
@@ -334,21 +400,158 @@ function TabResumen({ c, visitas, acciones, irA }: { c: Cliente; visitas: Visita
             </div>
           ))}
         </div>
-        <button type="button" onClick={() => irA("actividad")} className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand hover:underline">
-          Ver toda la actividad <ChevronRight size={14} />
-        </button>
       </div>
     </div>
   );
 }
 
-function Cifra({ Icon, valor, label, color }: { Icon: typeof Mail; valor: number; label: string; color: string }) {
-  return (
-    <div className="rounded-xl border border-line p-3">
+function Cifra({ Icon, valor, label, color, onClick }: { Icon: typeof Mail; valor: number; label: string; color: string; onClick?: () => void }) {
+  const cuerpo = (
+    <>
       <Icon size={16} style={{ color }} />
       <p className="mt-2 text-[22px] font-extrabold leading-none">{valor}</p>
       <p className="mt-1 text-[12px] text-[var(--text-3)]">{label}</p>
+    </>
+  );
+  return onClick ? (
+    <button type="button" onClick={onClick} className="rounded-xl border border-line p-3 text-left transition hover:border-brand/50 hover:bg-surface">{cuerpo}</button>
+  ) : (
+    <div className="rounded-xl border border-line p-3">{cuerpo}</div>
+  );
+}
+
+/* Tratamientos */
+
+const ESTADO_RX: Record<Receta["estado"], { label: string; className: string }> = {
+  enviada: { label: "Enviada por WhatsApp", className: "bg-slate-100 text-slate-700" },
+  leida: { label: "Leída por el cliente", className: "bg-sky-50 text-sky-700" },
+  duda: { label: "Cliente con duda", className: "bg-rose-50 text-rose-700" },
+};
+
+function TabTratamientos({ c }: { c: Cliente }) {
+  const { recetas, visitas, resumenes } = useStore();
+  const [estado, setEstado] = useState<"todos" | "curso" | "fin">("todos");
+  const [mascota, setMascota] = useState("todas");
+  const suyas = recetas
+    .filter((r) => r.clienteId === c.id)
+    .map((r) => ({ r, fecha: isoDeTexto(r.fecha), curso: recetaEnCurso(r) }))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const lista = suyas.filter((x) => (estado === "todos" || (estado === "curso") === x.curso) && (mascota === "todas" || x.r.mascota === mascota));
+
+  // Diagnóstico de la consulta del mismo día, si el veterinario la resumió.
+  const diagnostico = (m: string, fecha: string) => {
+    const v = visitas.find((x) => x.clienteId === c.id && x.agenda === "clinica" && x.mascota === m && x.fecha === fecha && resumenes[x.id]);
+    return v ? resumenes[v.id].diagnostico : undefined;
+  };
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[15px] font-bold">Tratamientos</p>
+          <p className="text-[12.5px] text-[var(--text-3)]">Recetas que el veterinario le ha dado a {c.mascotas.length === 1 ? c.mascotas[0].nombre : "sus mascotas"}.</p>
+        </div>
+        <Link href="/receta" className="inline-flex items-center gap-1 rounded-lg bg-[var(--clinica)] px-3 py-1.5 text-[12.5px] font-bold text-white hover:opacity-90">
+          <Plus size={14} /> Nueva receta
+        </Link>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {(
+          [
+            ["todos", "Todos"],
+            ["curso", "En curso"],
+            ["fin", "Finalizados"],
+          ] as const
+        ).map(([id, label]) => (
+          <Chip key={id} on={estado === id} onClick={() => setEstado(id)}>
+            {label} <span className="opacity-60">{id === "todos" ? suyas.length : suyas.filter((x) => (id === "curso") === x.curso).length}</span>
+          </Chip>
+        ))}
+        {c.mascotas.length > 1 &&
+          ["todas", ...c.mascotas.map((m) => m.nombre)].map((m) => (
+            <Chip key={m} on={mascota === m} onClick={() => setMascota(m)}>
+              {m === "todas" ? "Todas las mascotas" : m}
+            </Chip>
+          ))}
+      </div>
+
+      {lista.length === 0 && (
+        <div className="py-10 text-center text-[13px] text-[var(--text-3)]">
+          <Pill size={26} className="mx-auto mb-2 opacity-50" />
+          {suyas.length === 0 ? "Este paciente todavía no tiene recetas." : "Sin tratamientos con este filtro."}
+        </div>
+      )}
+      <div className="mt-4 space-y-3">
+        {lista.map(({ r, fecha, curso }) => {
+          const dx = diagnostico(r.mascota, fecha);
+          return (
+            <div key={r.id} className="rounded-xl border border-line p-3.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="flex items-center gap-2 text-[13.5px] font-bold">
+                  <FileText size={15} className="text-[var(--clinica)]" /> {r.mascota}
+                  <span className="font-normal text-[var(--text-3)]">
+                    · {fechaLegible(fecha)}
+                    {esHora(r.hora) ? ` · ${r.hora}` : ""}
+                  </span>
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", curso ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600")}>
+                    {curso ? "En curso" : "Finalizado"}
+                  </span>
+                  <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", ESTADO_RX[r.estado].className)}>{ESTADO_RX[r.estado].label}</span>
+                </div>
+              </div>
+              {dx && (
+                <p className="mt-1.5 text-[12.5px] text-[var(--text-2)]">
+                  <b>Diagnóstico de la consulta:</b> {dx}
+                </p>
+              )}
+              <div className="mt-2 overflow-x-auto">
+                <table className="w-full min-w-[460px] text-left text-[12.5px]">
+                  <thead className="text-[10.5px] uppercase tracking-wider text-[var(--text-3)]">
+                    <tr>
+                      <th className="pb-1 pr-2">Medicamento</th>
+                      <th className="pb-1 pr-2">Dosis</th>
+                      <th className="pb-1 pr-2">Frecuencia</th>
+                      <th className="pb-1">Duración</th>
+                    </tr>
+                  </thead>
+                  <tbody className="align-top">
+                    {r.items.map((i) => (
+                      <tr key={i.medicamento} className="border-t border-line">
+                        <td className="py-1.5 pr-2 font-semibold">{i.medicamento}</td>
+                        <td className="py-1.5 pr-2">{i.dosis}</td>
+                        <td className="py-1.5 pr-2">{i.frecuencia}</td>
+                        <td className="py-1.5">{i.duracion}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {r.indicaciones && (
+                <p className="mt-2 rounded-lg bg-surface px-2.5 py-1.5 text-[12.5px] text-[var(--text-2)]">
+                  <b>Indicaciones:</b> {r.indicaciones}
+                </p>
+              )}
+              <p className="mt-1.5 text-[11px] text-[var(--text-3)]">Escrita por {STAFF.veterinario.nombre}</p>
+            </div>
+          );
+        })}
+      </div>
     </div>
+  );
+}
+
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn("rounded-full border px-3 py-1 text-[12.5px] font-semibold", on ? "border-[var(--text)] bg-[var(--text)] text-white" : "border-line text-[var(--text-2)] hover:bg-surface")}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -613,79 +816,94 @@ function NotaDetalle({ n }: { n: Nota }) {
   );
 }
 
-/* Historial clínico */
+/* Últimas visitas (Overview) */
 
-function TabHistorial({ c, visitas, acciones }: { c: Cliente; visitas: Visita[]; acciones: Acciones }) {
+function UltimasVisitas({ c, visitas, acciones }: { c: Cliente; visitas: Visita[]; acciones: Acciones }) {
   const { resumenes } = useStore();
+  const [agenda, setAgenda] = useState<"todas" | Agenda>("todas");
   const [mascota, setMascota] = useState("todas");
-  const [abierta, setAbierta] = useState<string | null>(null);
-  const clinica = visitas
-    .filter((v) => v.agenda === "clinica" && (mascota === "todas" || v.mascota === mascota))
-    .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.hora.localeCompare(a.hora));
+  const [todas, setTodas] = useState(false);
+  const recientes = (vs: Visita[]) => [...vs].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.hora.localeCompare(a.hora));
+  const orden = recientes(visitas.filter((v) => (agenda === "todas" || v.agenda === agenda) && (mascota === "todas" || v.mascota === mascota)));
+  // La consulta resumida más reciente abre desplegada.
+  const [abierta, setAbierta] = useState<string | null>(() => recientes(visitas.filter((v) => resumenes[v.id]))[0]?.id ?? null);
+  const lista = todas ? orden : orden.slice(0, 5);
 
   return (
-    <div>
+    <div className="rounded-xl border border-line p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-[15px] font-bold">Visitas a clínica</p>
-          <p className="text-[12.5px] text-[var(--text-3)]">Cada consulta con el resumen del veterinario. Solo uso interno.</p>
+          <p className="text-[14px] font-bold">Historial · últimas visitas</p>
+          <p className="text-[12.5px] text-[var(--text-3)]">Las consultas incluyen el resumen del veterinario (uso interno).</p>
         </div>
         <button type="button" onClick={() => acciones.resumir()} className="inline-flex items-center gap-1 rounded-lg bg-[var(--clinica)] px-3 py-1.5 text-[12.5px] font-bold text-white hover:opacity-90">
           <ClipboardPen size={14} /> Resumir consulta
         </button>
       </div>
 
-      {c.mascotas.length > 1 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {["todas", ...c.mascotas.map((m) => m.nombre)].map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMascota(m)}
-              className={cn("rounded-full border px-3 py-1 text-[12.5px] font-semibold", mascota === m ? "border-[var(--clinica)] bg-[var(--clinica)] text-white" : "border-line text-[var(--text-2)] hover:bg-surface")}
-            >
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {(["todas", "clinica", "grooming"] as const).map((a) => (
+          <Chip key={a} on={agenda === a} onClick={() => setAgenda(a)}>
+            {a === "todas" ? "Todas" : a === "clinica" ? "Clínica" : "Grooming"}
+          </Chip>
+        ))}
+        {c.mascotas.length > 1 &&
+          ["todas", ...c.mascotas.map((m) => m.nombre)].map((m) => (
+            <Chip key={m} on={mascota === m} onClick={() => setMascota(m)}>
               {m === "todas" ? "Todas las mascotas" : m}
-            </button>
+            </Chip>
           ))}
-        </div>
-      )}
+      </div>
 
-      {clinica.length === 0 && <p className="py-10 text-center text-[13px] text-[var(--text-3)]">Sin visitas a clínica registradas.</p>}
-      <ol className="relative mt-4 space-y-3 border-l-2 border-[var(--clinica-soft)] pl-5">
-        {clinica.map((v) => {
+      {orden.length === 0 && <p className="py-8 text-center text-[13px] text-[var(--text-3)]">Sin visitas registradas.</p>}
+      <ol className="relative mt-4 space-y-3 border-l-2 border-line pl-5">
+        {lista.map((v) => {
           const r = resumenes[v.id];
           const ver = abierta === v.id;
           return (
             <li key={v.id} className="relative">
-              <span className="absolute -left-[27px] top-3 h-3 w-3 rounded-full border-2 border-card bg-[var(--clinica)]" />
+              <span className="absolute -left-[27px] top-3.5 h-3 w-3 rounded-full border-2 border-card" style={{ backgroundColor: AGENDA_INFO[v.agenda].color }} />
               <div className="rounded-xl border border-line p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-[13.5px] font-bold">
-                      {fechaLegible(v.fecha)} · {v.hora} <span className="font-normal text-[var(--text-2)]">· {v.mascota} · {v.servicio}</span>
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] font-bold">
+                      <AgendaPill agenda={v.agenda} />
+                      {fechaLegible(v.fecha)} · {v.hora}
+                      <span className="font-normal text-[var(--text-2)]">
+                        · {v.mascota} · {v.servicio}
+                      </span>
                     </p>
-                    {r ? (
-                      <p className="mt-0.5 text-[12.5px] text-[var(--text-2)]">
+                    {v.agenda === "grooming" ? (
+                      <p className="mt-1 text-[12.5px] text-[var(--text-3)]">Atendió {v.atendio}</p>
+                    ) : r ? (
+                      <p className="mt-1 text-[12.5px] text-[var(--text-2)]">
                         <b>Diagnóstico:</b> {r.diagnostico} · <b>Control:</b> {r.proximoControl}
                       </p>
                     ) : (
-                      <p className="mt-0.5 text-[12.5px] text-amber-700">Sin resumen de consulta</p>
+                      <p className="mt-1 text-[12.5px] text-amber-700">Sin resumen de consulta</p>
                     )}
                   </div>
-                  {r ? (
-                    <button type="button" onClick={() => setAbierta(ver ? null : v.id)} className="text-[12.5px] font-semibold text-brand hover:underline">
-                      {ver ? "Ocultar" : "Ver resumen"}
-                    </button>
-                  ) : (
-                    <button type="button" onClick={() => acciones.resumir(v)} className="inline-flex items-center gap-1 rounded-lg border border-[var(--clinica)] px-2 py-1 text-[12px] font-semibold text-[var(--clinica)] hover:bg-[var(--clinica-soft)]">
-                      <ClipboardPen size={13} /> Resumir
-                    </button>
-                  )}
+                  {v.agenda === "clinica" &&
+                    (r ? (
+                      <button type="button" onClick={() => setAbierta(ver ? null : v.id)} className="text-[12.5px] font-semibold text-brand hover:underline">
+                        {ver ? "Ocultar" : "Ver resumen"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => acciones.resumir(v)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-[var(--clinica)] px-2 py-1 text-[12px] font-semibold text-[var(--clinica)] hover:bg-[var(--clinica-soft)]"
+                      >
+                        <ClipboardPen size={13} /> Resumir
+                      </button>
+                    ))}
                 </div>
                 {ver && r && (
                   <>
                     <ResumenBloque r={r} className="mt-3" />
-                    <button type="button" onClick={() => acciones.resumir(v)} className="mt-2 text-[12px] font-semibold text-brand hover:underline">Editar resumen</button>
+                    <button type="button" onClick={() => acciones.resumir(v)} className="mt-2 text-[12px] font-semibold text-brand hover:underline">
+                      Editar resumen
+                    </button>
                   </>
                 )}
               </div>
@@ -693,6 +911,11 @@ function TabHistorial({ c, visitas, acciones }: { c: Cliente; visitas: Visita[];
           );
         })}
       </ol>
+      {orden.length > 5 && (
+        <button type="button" onClick={() => setTodas((x) => !x)} className="mt-3 text-[12.5px] font-semibold text-brand hover:underline">
+          {todas ? "Ver menos" : `Ver todas las visitas (${orden.length})`}
+        </button>
+      )}
     </div>
   );
 }

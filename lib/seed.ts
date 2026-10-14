@@ -537,6 +537,25 @@ export const RECETAS: Receta[] = [
       { medicamento: "Glucosamina 500 mg", dosis: "1 tableta", frecuencia: "Cada 24 h", duracion: "30 días" },
     ],
   },
+  {
+    id: "rx4", clienteId: "c1", mascota: "Max", hora: "09:55", fecha: "12 ago 2026", estado: "leida", indicaciones: "Bañar con el shampoo dejándolo actuar 10 minutos. Cambiar el alimento de forma gradual en 7 días.",
+    items: [
+      { medicamento: "Shampoo clorhexidina 2%", dosis: "Baño completo", frecuencia: "2 veces por semana", duracion: "4 semanas" },
+      { medicamento: "Alimento hipoalergénico (proteína hidrolizada)", dosis: "Según peso", frecuencia: "Diario", duracion: "Continuo" },
+    ],
+  },
+  {
+    id: "rx5", clienteId: "c5", mascota: "Mishi", hora: "16:20", fecha: "18 sep 2026", estado: "leida", indicaciones: "Aplicar en las zonas sin pelo con guantes. Evitar que se lama por 15 minutos.",
+    items: [{ medicamento: "Crema de ketoconazol 2%", dosis: "Capa delgada", frecuencia: "Cada 12 h", duracion: "14 días" }],
+  },
+  {
+    id: "rx6", clienteId: "c3", mascota: "Coco", hora: "11:15", fecha: "22 abr 2026", estado: "leida",
+    items: [{ medicamento: "Drontal Plus", dosis: "1 tableta", frecuencia: "Dosis única", duracion: "Repetir en 3 meses" }],
+  },
+  {
+    id: "rx7", clienteId: "c10", mascota: "Kira", hora: "12:05", fecha: "22 sep 2026", estado: "enviada", indicaciones: "Suplemento preventivo por edad.",
+    items: [{ medicamento: "Omega 3 (aceite de pescado)", dosis: "1 cápsula", frecuencia: "Cada 24 h con comida", duracion: "60 días" }],
+  },
 ];
 
 export function cliente(id: string): Cliente {

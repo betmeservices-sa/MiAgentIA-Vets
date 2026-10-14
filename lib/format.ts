@@ -1,4 +1,4 @@
-import type { Agenda, EstadoCita, MotivoTransferencia } from "./types";
+import type { Agenda, EstadoCita, MotivoTransferencia, Receta } from "./types";
 
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -98,4 +98,21 @@ export function mesLegible(f: string): string {
 /** Días transcurridos desde la fecha (positivo = pasado). */
 export function diasDesde(f: string): number {
   return Math.round((fechaDe(0).getTime() - deIso(f).getTime()) / 86400000);
+}
+
+/** Días que dura un tratamiento según su texto ("7 días", "4 semanas"…). Infinity = continuo. */
+function duracionDias(d: string): number {
+  const t = d.toLowerCase();
+  if (t.includes("continuo")) return Infinity;
+  if (t.startsWith("repetir")) return 0;
+  const n = Number(t.match(/\d+/)?.[0] ?? 0);
+  if (t.includes("semana")) return n * 7;
+  if (t.includes("mes")) return n * 30;
+  return n;
+}
+
+/** ¿Sigue en curso alguna línea de la receta? */
+export function recetaEnCurso(r: Receta): boolean {
+  const dias = Math.max(...r.items.map((i) => duracionDias(i.duracion)));
+  return diasDesde(isoDeTexto(r.fecha)) < dias;
 }
