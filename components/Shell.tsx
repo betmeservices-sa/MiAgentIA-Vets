@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  BarChart3,
   BellRing,
   CalendarDays,
   ChevronDown,
@@ -33,7 +34,7 @@ interface NavItem {
   Icon: LucideIcon;
 }
 
-// Menú lateral: bandeja, acciones (agrupadas) y pacientes. Calendarios y
+// Menú lateral: bandeja, acciones (agrupadas), pacientes y dashboard. Calendarios y
 // recordatorios viven en la barra de arriba.
 const ACCIONES: NavItem[] = [
   { href: "/receta", label: "Receta", Icon: Pill },
@@ -282,6 +283,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
         )}
 
         <NavLink href="/pacientes" label="Pacientes" Icon={Users} activo={activo(pathname, "/pacientes")} onClick={onClose} />
+        <NavLink href="/dashboard" label="Dashboard" Icon={BarChart3} activo={activo(pathname, "/dashboard")} onClick={onClose} />
       </nav>
 
       <div className="space-y-3 border-t border-line p-3">

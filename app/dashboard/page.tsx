@@ -56,7 +56,7 @@ export default function DashboardPage() {
                   onClick={() => setVista(v)}
                   className={cn("rounded-lg px-3 py-1.5 text-[13px] font-semibold", vista === v ? "bg-[var(--text)] text-white" : "text-[var(--text-2)] hover:bg-surface")}
                 >
-                  {v === "secretaria" ? "Secretaria · hoy" : "Veterinario · semana"}
+                  {v === "secretaria" ? "Hoy" : "Últimos 7 días"}
                 </button>
               ))}
             </div>
