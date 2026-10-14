@@ -70,7 +70,7 @@ export const CONOCIMIENTO = {
 };
 
 export const CLIENTES: Cliente[] = [
-  { id: "c1", nombre: "María José Pérez", telefono: "+502 5512 3344", correo: "mariajose.perez@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Max", especie: "Perro", raza: "Labrador", edad: "3 años", tamano: "Grande", contactos: [{ nombre: "Jorge Pérez", telefono: "+502 5598 1200", relacion: "Esposo de María José", creadoPorIA: true, desde: "Hoy" }] }], ultimaClinica: "12 ago 2026", ultimaGrooming: "20 sep 2026", etiquetas: ["Cliente frecuente"] },
+  { id: "c1", nombre: "María José Pérez", telefono: "+502 5512 3344", correo: "mariajose.perez@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Max", especie: "Perro", raza: "Labrador", edad: "3 años", tamano: "Grande", contactos: [{ nombre: "Jorge Pérez", telefono: "+502 5598 1200", relacion: "Esposo de María José", creadoPorIA: true, desde: "Hoy" }, { nombre: "Valentina Pérez", telefono: "+502 4120 5566", relacion: "Hija de María José", creadoPorIA: true, desde: "Hoy" }] }], ultimaClinica: "12 ago 2026", ultimaGrooming: "20 sep 2026", etiquetas: ["Cliente frecuente"] },
   { id: "c2", nombre: "Jorge Castillo", telefono: "+502 4421 9087", correo: "jorge.castillo@hotmail.com", canal: "instagram", mascotas: [{ nombre: "Toby", especie: "Perro", raza: "Schnauzer", edad: "5 años", tamano: "Mediano" }, { nombre: "Bimba", especie: "Perro", raza: "Cocker spaniel", edad: "2 años", tamano: "Mediano", creadaPorIA: true }], ultimaGrooming: "15 jul 2026" },
   { id: "c3", nombre: "Ana Lucía Morales", telefono: "+502 3098 7765", correo: "analucia.morales@yahoo.com", canal: "whatsapp", mascotas: [{ nombre: "Coco", especie: "Perro", raza: "Beagle", edad: "2 años", tamano: "Mediano" }], ultimaClinica: "3 sep 2026" },
   { id: "c4", nombre: "Roberto Gálvez", telefono: "+502 5590 1123", correo: "roberto.galvez@outlook.com", canal: "facebook", mascotas: [{ nombre: "Rocky", especie: "Perro", raza: "Pastor alemán", edad: "4 años", tamano: "Grande", contactos: [{ nombre: "Ana de Gálvez", telefono: "+502 5590 7781", relacion: "Esposa de Roberto", desde: "2 ago 2026" }] }, { nombre: "Luna", especie: "Perro", raza: "Pastor alemán", edad: "4 años", tamano: "Grande", contactos: [{ nombre: "Ana de Gálvez", telefono: "+502 5590 7781", relacion: "Esposa de Roberto", desde: "2 ago 2026" }] }, { nombre: "Thor", especie: "Perro", raza: "Husky", edad: "2 años", tamano: "Grande" }], ultimaGrooming: "2 ago 2026" },
@@ -129,6 +129,21 @@ export const CONVERSACIONES: Conversacion[] = [
       { id: "m2", autor: "ia", texto: "¡Hola Roberto! Con gusto te ayudo con el baño de los 3. Sobre un precio especial por los 3, eso lo autoriza directamente la clínica: te comunico con Andrea para que te confirme.", hora: "10:16" },
       { id: "m3", autor: "sistema", texto: "Transferida a secretaria · Motivo: excepción de precio (descuento por 3 mascotas).", hora: "10:17" },
       { id: "m4", autor: "cliente", texto: "Va, gracias", hora: "10:18" },
+    ],
+  },
+  {
+    id: "v31", objetivo: "recordatorio", resultado: { tipo: "confirmada", texto: "Clínica · mañana 11:30" }, clienteId: "c1", canal: "whatsapp", agenda: "clinica", estado: "ia", noLeidos: 0, hora: "10:27",
+    contacto: { nombre: "Valentina Pérez", telefono: "+502 4120 5566", relacion: "Hija de María José", mascota: "Max" },
+    mensajes: [
+      { id: "m1", autor: "cliente", texto: "Hola! Max Pérez tiene vacuna mañana, mi mamá no puede ir. ¿Lo puedo llevar yo?", hora: "10:22" },
+      { id: "m2", autor: "ia", texto: "¡Hola! Sí, Max Pérez tiene su vacuna múltiple mañana a las 11:30. Este número no está en su perfil, así que primero te registro: ¿cuál es tu nombre y tu relación con Max? Y para confirmar que es él, ¿qué edad tiene?", hora: "10:22" },
+      { id: "m3", autor: "cliente", texto: "Valentina, soy la hija de María José. Tiene 3 años", hora: "10:24" },
+      { id: "m4", autor: "sistema", texto: "Contacto secundario creado por Luna · Valentina Pérez (+502 4120 5566) · Hija de María José · agregado al perfil de Max Pérez (2.º contacto). Queda para revisión de recepción.", hora: "10:24" },
+      { id: "m5", autor: "ia", texto: "¡Gracias, Valentina! Ya quedaste como contacto de Max Pérez. Claro que puedes llevarlo tú: ¿te confirmo la cita de mañana a las 11:30 con el Dr. Méndez?", hora: "10:24", botones: ["Confirmar", "Reagendar"] },
+      { id: "m6", autor: "cliente", texto: "Confirmar", hora: "10:26" },
+      { id: "m7", autor: "ia", texto: "Listo ✅ Cita confirmada: Max Pérez, vacuna múltiple, mañana a las 11:30. Lleva su carné de vacunas, por favor. Le aviso a María José que tú lo llevas.", hora: "10:26" },
+      { id: "m8", autor: "sistema", texto: "Cita confirmada en Agenda Clínica (Google Calendar · dr.mendez@patitasvet.gt).", hora: "10:26" },
+      { id: "m9", autor: "cliente", texto: "Mil gracias 🙌", hora: "10:27" },
     ],
   },
   {
@@ -334,7 +349,7 @@ const HOY: Cita[] = [
   { id: "g4", agenda: "grooming", clienteId: "c4", mascota: "Rocky", servicio: "Baño (grande)", dia: 0, hora: "14:00", duracionMin: 120, estado: "confirmada", origen: "ia" },
   { id: "x1", agenda: "clinica", clienteId: "c12", mascota: "Nala", servicio: "Consulta general", dia: -1, hora: "10:00", duracionMin: 30, estado: "ausente", origen: "manual" },
   { id: "x2", agenda: "grooming", clienteId: "c11", mascota: "Peluche", servicio: "Baño y corte (pequeño)", dia: 1, hora: "10:00", duracionMin: 90, estado: "reagendada", origen: "ia" },
-  { id: "x3", agenda: "clinica", clienteId: "c1", mascota: "Max", servicio: "Vacuna múltiple", dia: 1, hora: "11:30", duracionMin: 20, estado: "por_confirmar", origen: "ia" },
+  { id: "x3", agenda: "clinica", clienteId: "c1", mascota: "Max", servicio: "Vacuna múltiple", dia: 1, hora: "11:30", duracionMin: 20, estado: "confirmada", origen: "ia" },
   { id: "x4", agenda: "grooming", clienteId: "c2", mascota: "Toby", servicio: "Baño y corte (mediano)", dia: 2, hora: "08:00", duracionMin: 120, estado: "confirmada", origen: "ia" },
   { id: "x5", agenda: "grooming", clienteId: "c7", mascota: "Lola", servicio: "Baño y corte (pequeño)", dia: 3, hora: "09:00", duracionMin: 90, estado: "confirmada", origen: "ia" },
   { id: "x6", agenda: "grooming", clienteId: "c11", mascota: "Peluche", servicio: "Baño y corte (pequeño)", dia: 4, hora: "11:00", duracionMin: 90, estado: "confirmada", origen: "ia" },
