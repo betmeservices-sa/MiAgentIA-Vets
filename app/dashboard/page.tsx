@@ -22,6 +22,7 @@ import { cn } from "@/lib/cn";
 import { AGENDA_INFO, diaCorto, etiquetaDia, pct } from "@/lib/format";
 import { citasDe, ocupacion, proximosLibres } from "@/lib/agenda";
 import { CITAS, cliente, PLANTILLAS } from "@/lib/seed";
+import { DashboardResumen } from "@/components/DashboardResumen";
 import { ReactivacionResumen } from "@/components/ReactivacionResumen";
 import { UrgenciasVet } from "@/components/UrgenciasVet";
 import { pasaFiltro, useStore } from "@/lib/store";
@@ -35,39 +36,45 @@ const BANDEJA: Record<Agenda, { canal: { whatsapp: number; instagram: number; fa
   grooming: { canal: { whatsapp: 96, instagram: 44, facebook: 15 }, ia: 139, transferidas: 16, fueraHorario: 47, motivos: { "Caso clínico": 1, Urgencia: 0, "Excepción de precio": 9, "Pidió hablar con alguien": 6 } },
 };
 
-type Vista = "secretaria" | "veterinario";
+type Vista = "resumen" | "secretaria" | "veterinario";
 
 export default function DashboardPage() {
   const { filtro, conversaciones } = useStore();
-  const [vista, setVista] = useState<Vista>("secretaria");
+  const [vista, setVista] = useState<Vista>("resumen");
   const agendas = (["clinica", "grooming"] as Agenda[]).filter((a) => pasaFiltro(filtro, a));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <PageHeader
         title="Dashboard"
-        sub={vista === "secretaria" ? "Operación del día · se actualiza en vivo" : "Resumen semanal · últimos 7 días"}
+        sub={vista === "resumen" ? "Resumen del mes: consumo de IA, canales, publicaciones e intervenciones" : vista === "secretaria" ? "Operación del día · se actualiza en vivo" : "Resumen semanal · últimos 7 días"}
         right={
           <>
             <div className="inline-flex rounded-xl border border-line bg-card p-1 shadow-sm">
-              {(["secretaria", "veterinario"] as Vista[]).map((v) => (
+              {(["resumen", "secretaria", "veterinario"] as Vista[]).map((v) => (
                 <button
                   key={v}
                   onClick={() => setVista(v)}
                   className={cn("rounded-lg px-3 py-1.5 text-[13px] font-semibold", vista === v ? "bg-[var(--text)] text-white" : "text-[var(--text-2)] hover:bg-surface")}
                 >
-                  {v === "secretaria" ? "Hoy" : "Últimos 7 días"}
+                  {v === "resumen" ? "Resumen del mes" : v === "secretaria" ? "Hoy" : "Últimos 7 días"}
                 </button>
               ))}
             </div>
-            <FiltroAgendaToggle />
+            {vista !== "resumen" && <FiltroAgendaToggle />}
           </>
         }
       />
       <div className="space-y-5 p-6">
-        {vista === "veterinario" && agendas.includes("clinica") && <UrgenciasVet />}
-        <CitasDelDia agendas={agendas} />
-        {vista === "secretaria" ? <VistaDia agendas={agendas} transferidas={conversaciones.filter((c) => c.estado === "transferida" && (c.agenda === null || agendas.includes(c.agenda)))} /> : <VistaSemana agendas={agendas} />}
+        {vista === "resumen" ? (
+          <DashboardResumen />
+        ) : (
+          <>
+            {vista === "veterinario" && agendas.includes("clinica") && <UrgenciasVet />}
+            <CitasDelDia agendas={agendas} />
+            {vista === "secretaria" ? <VistaDia agendas={agendas} transferidas={conversaciones.filter((c) => c.estado === "transferida" && (c.agenda === null || agendas.includes(c.agenda)))} /> : <VistaSemana agendas={agendas} />}
+          </>
+        )}
         <p className="text-center text-[11.5px] text-[var(--text-3)]">Sin montos de dinero ni cálculos de retorno: el dashboard mide operación y atención.</p>
       </div>
     </div>
