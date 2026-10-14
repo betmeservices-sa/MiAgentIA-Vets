@@ -13,7 +13,6 @@ import {
   LogOut,
   Menu,
   PawPrint,
-  Pill,
   Stethoscope,
   UserRoundSearch,
   Users,
@@ -37,7 +36,6 @@ interface NavItem {
 // Menú lateral: bandeja, acciones (agrupadas), pacientes y dashboard. Calendarios y
 // recordatorios viven en la barra de arriba.
 const ACCIONES: NavItem[] = [
-  { href: "/receta", label: "Receta", Icon: Pill },
   { href: "/seguimiento", label: "Seguimiento", Icon: Stethoscope },
   { href: "/reactivacion", label: "Reactivación", Icon: UserRoundSearch },
 ];

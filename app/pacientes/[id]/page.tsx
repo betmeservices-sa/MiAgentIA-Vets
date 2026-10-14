@@ -20,7 +20,6 @@ import {
   Plus,
   Scissors,
   Search,
-  Sparkles,
   Stethoscope,
   X,
 } from "lucide-react";
@@ -30,7 +29,7 @@ import { CITAS, CLIENTES, STAFF } from "@/lib/seed";
 import { useStore } from "@/lib/store";
 import type { Agenda, Cita, Cliente, Conversacion, Nota, Receta, Visita } from "@/lib/types";
 import { AgendaPill, Avatar, ChannelBadge, EstadoCitaPill } from "@/components/ui";
-import { Menu, NotaModal, ResumenBloque, ResumenModal } from "@/components/ResumenConsulta";
+import { Menu, NotaModal, RecetaModal, ResumenBloque, ResumenModal } from "@/components/ResumenConsulta";
 
 // Ficha del paciente al estilo CRM: datos del dueño a la izquierda, actividad
 // e historial clínico al centro, mascotas y próximas citas a la derecha.
@@ -49,7 +48,7 @@ export default function PacientePage() {
   return <Ficha key={c.id} c={c} />;
 }
 
-type Modal = { tipo: "resumen"; visita?: Visita } | { tipo: "nota" } | null;
+type Modal = { tipo: "resumen"; visita?: Visita } | { tipo: "nota" } | { tipo: "receta" } | null;
 
 function Ficha({ c }: { c: Cliente }) {
   const router = useRouter();
@@ -75,13 +74,13 @@ function Ficha({ c }: { c: Cliente }) {
     setDiaCalendario(dia);
     router.push("/agendas");
   };
-  const acciones = { abrirConversacion, agendar, resumir: (v?: Visita) => setModal({ tipo: "resumen", visita: v }), nota: () => setModal({ tipo: "nota" }) };
+  const acciones = { abrirConversacion, agendar, resumir: (v?: Visita) => setModal({ tipo: "resumen", visita: v }), nota: () => setModal({ tipo: "nota" }), receta: () => setModal({ tipo: "receta" }) };
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-3 outline-none sm:p-4">
       <div className="grid gap-4 lg:grid-cols-[290px_minmax(0,1fr)] 2xl:grid-cols-[290px_minmax(0,1fr)_300px]">
         <div className="space-y-4">
-          <Contacto c={c} conv={conv} visitas={suyas} acciones={acciones} />
+          <Contacto c={c} visitas={suyas} acciones={acciones} />
         </div>
         <div className="min-w-0 lg:row-span-2 2xl:row-span-1">
           <Centro c={c} tab={tab} setTab={setTab} visitas={suyas} acciones={acciones} />
@@ -109,6 +108,7 @@ function Ficha({ c }: { c: Cliente }) {
         </div>
       )}
       {modal?.tipo === "nota" && <NotaModal c={c} onClose={() => setModal(null)} />}
+      {modal?.tipo === "receta" && <RecetaModal c={c} onClose={() => setModal(null)} onEnviada={() => setTab("tratamientos")} />}
     </div>
   );
 }
@@ -118,16 +118,15 @@ interface Acciones {
   agendar: (a: Agenda) => void;
   resumir: (v?: Visita) => void;
   nota: () => void;
+  receta: () => void;
 }
 
 /* ---------- Columna izquierda: dueño ---------- */
 
-function Contacto({ c, conv, visitas, acciones }: { c: Cliente; conv?: Conversacion; visitas: Visita[]; acciones: Acciones }) {
-  const [abierto, setAbierto] = useState(true);
-  const ultimaVisita = [...visitas].sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+function Contacto({ c, visitas, acciones }: { c: Cliente; visitas: Visita[]; acciones: Acciones }) {
 
   const rapidas: { label: string; Icon: typeof Mail; onClick?: () => void; href?: string }[] = [
-    { label: "Nota", Icon: NotebookPen, onClick: acciones.nota },
+    { label: "Receta", Icon: Pill, onClick: acciones.receta },
     { label: "Correo", Icon: Mail, href: `mailto:${c.correo}` },
     { label: "Chat", Icon: MessageCircle, onClick: acciones.abrirConversacion },
     { label: "Llamar", Icon: Phone, href: `tel:${c.telefono.replace(/\s/g, "")}` },
@@ -150,7 +149,7 @@ function Contacto({ c, conv, visitas, acciones }: { c: Cliente; conv?: Conversac
               { label: "Agendar en grooming", onClick: () => acciones.agendar("grooming") },
               { label: "Resumir consulta", onClick: () => acciones.resumir() },
               { label: "Agregar nota", onClick: acciones.nota },
-              { label: "Escribir receta", href: "/receta" },
+              { label: "Escribir receta", onClick: acciones.receta },
             ]}
           />
         </div>
@@ -197,36 +196,6 @@ function Contacto({ c, conv, visitas, acciones }: { c: Cliente; conv?: Conversac
 
       <ResumenCliente c={c} visitas={visitas} />
 
-      <section className="rounded-2xl border border-line bg-card shadow-sm">
-        <button type="button" onClick={() => setAbierto((a) => !a)} className="flex w-full items-center gap-2 px-4 py-3 text-left">
-          <ChevronDown size={16} className={cn("transition", !abierto && "-rotate-90")} />
-          <span className="text-[14px] font-bold">Acerca del dueño</span>
-        </button>
-        {abierto && (
-          <dl className="space-y-3 border-t border-line px-4 py-3 text-[13px]">
-            <Dato label="Correo">{c.correo}</Dato>
-            <Dato label="Teléfono">{c.telefono}</Dato>
-            <Dato label="Canal preferido"><ChannelBadge canal={c.canal} label /></Dato>
-            <Dato label="Último contacto">{conv ? `Hoy ${conv.hora}` : "—"}</Dato>
-            <Dato label="Última visita">{ultimaVisita ? `${fechaLegible(ultimaVisita.fecha)} · ${AGENDA_INFO[ultimaVisita.agenda].label}` : "Sin visitas"}</Dato>
-            <Dato label="Origen">
-              {c.creadoPorIA ? (
-                <span className="inline-flex items-center gap-1 font-semibold text-violet-700"><Sparkles size={12} /> Creado por Luna</span>
-              ) : (
-                "Base de la clínica"
-              )}
-            </Dato>
-            <Dato label="Mensajes de promociones">{c.optOutMarketing ? "No desea recibir" : "Acepta"}</Dato>
-            {c.etiquetas?.length ? (
-              <Dato label="Etiquetas">
-                <span className="flex flex-wrap gap-1">
-                  {c.etiquetas.map((e) => <span key={e} className="rounded-md bg-surface px-1.5 py-0.5 text-[11.5px] font-semibold">{e}</span>)}
-                </span>
-              </Dato>
-            ) : null}
-          </dl>
-        )}
-      </section>
     </>
   );
 }
@@ -297,15 +266,6 @@ function ResumenCliente({ c, visitas }: { c: Cliente; visitas: Visita[] }) {
   );
 }
 
-function Dato({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-[11.5px] text-[var(--text-3)]">{label}</dt>
-      <dd className="mt-0.5 break-words font-medium">{children}</dd>
-    </div>
-  );
-}
-
 function Copiable({ valor, href }: { valor: string; href: string }) {
   const [copiado, setCopiado] = useState(false);
   return (
@@ -359,7 +319,7 @@ function Centro({ c, tab, setTab, visitas, acciones }: { c: Cliente; tab: Tab; s
       </div>
       <div className="p-4">
         {tab === "overview" && <TabOverview c={c} visitas={visitas} acciones={acciones} irA={setTab} />}
-        {tab === "tratamientos" && <TabTratamientos c={c} />}
+        {tab === "tratamientos" && <TabTratamientos c={c} nueva={acciones.receta} />}
         {tab === "actividad" && <TabActividad c={c} visitas={visitas} acciones={acciones} />}
       </div>
     </section>
@@ -450,7 +410,7 @@ const ESTADO_RX: Record<Receta["estado"], { label: string; className: string }> 
   duda: { label: "Cliente con duda", className: "bg-rose-50 text-rose-700" },
 };
 
-function TabTratamientos({ c }: { c: Cliente }) {
+function TabTratamientos({ c, nueva }: { c: Cliente; nueva: () => void }) {
   const { recetas, visitas, resumenes } = useStore();
   const [estado, setEstado] = useState<"todos" | "curso" | "fin">("todos");
   const [mascota, setMascota] = useState("todas");
@@ -473,9 +433,9 @@ function TabTratamientos({ c }: { c: Cliente }) {
           <p className="text-[15px] font-bold">Tratamientos</p>
           <p className="text-[12.5px] text-[var(--text-3)]">Recetas que el veterinario le ha dado a {c.mascotas.length === 1 ? c.mascotas[0].nombre : "sus mascotas"}.</p>
         </div>
-        <Link href="/receta" className="inline-flex items-center gap-1 rounded-lg bg-[var(--clinica)] px-3 py-1.5 text-[12.5px] font-bold text-white hover:opacity-90">
+        <button type="button" onClick={nueva} className="inline-flex items-center gap-1 rounded-lg bg-[var(--clinica)] px-3 py-1.5 text-[12.5px] font-bold text-white hover:opacity-90">
           <Plus size={14} /> Nueva receta
-        </Link>
+        </button>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">

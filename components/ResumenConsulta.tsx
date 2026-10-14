@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CalendarPlus, ChevronDown, ClipboardPen, NotebookPen, ShieldCheck, X, type LucideIcon } from "lucide-react";
+import { CalendarPlus, ChevronDown, ClipboardPen, NotebookPen, Pill, Plus, Send, ShieldCheck, Trash2, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { espaciosLibres, horario } from "@/lib/agenda";
 import { AGENDA_INFO, etiquetaDia, fechaDe, fechaLegible, iso } from "@/lib/format";
 import { STAFF } from "@/lib/seed";
 import { ahora, useStore } from "@/lib/store";
-import type { Agenda, Cita, Cliente, ResumenConsulta, Visita } from "@/lib/types";
+import type { Agenda, Cita, Cliente, ItemReceta, ResumenConsulta, Visita } from "@/lib/types";
 
 /** Resumen de consulta en solo lectura. */
 export function ResumenBloque({ r, className }: { r: ResumenConsulta; className?: string }) {
@@ -349,6 +349,125 @@ export function ResumenModal({
             className="rounded-lg bg-[var(--clinica)] px-3 py-1.5 text-[13px] font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {agendar ? "Guardar y agendar" : "Guardar resumen"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+const vacio = (): ItemReceta => ({ medicamento: "", dosis: "", frecuencia: "", duracion: "" });
+
+/**
+ * Receta desde la ficha del paciente: el veterinario la escribe y sale en PDF
+ * por WhatsApp. Queda en Tratamientos.
+ */
+export function RecetaModal({ c, onClose, onEnviada }: { c: Cliente; onClose: () => void; onEnviada?: () => void }) {
+  const { agregarReceta } = useStore();
+  const [mascota, setMascota] = useState(c.mascotas[0].nombre);
+  const [items, setItems] = useState<ItemReceta[]>([vacio()]);
+  const [indicaciones, setIndicaciones] = useState("");
+  const validos = items.filter((i) => i.medicamento.trim());
+  const editar = (i: number, cambio: Partial<ItemReceta>) => setItems((xs) => xs.map((x, j) => (j === i ? { ...x, ...cambio } : x)));
+  const campo = "w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--clinica)]";
+
+  const enviar = () => {
+    if (!validos.length) return;
+    agregarReceta({
+      id: `rx${Date.now()}`,
+      clienteId: c.id,
+      mascota,
+      hora: ahora(),
+      fecha: "Hoy",
+      items: validos.map((i) => ({ ...i, medicamento: i.medicamento.trim() })),
+      indicaciones: indicaciones.trim() || undefined,
+      estado: "enviada",
+    });
+    onEnviada?.();
+    onClose();
+  };
+
+  return (
+    <Modal titulo="Nueva receta" Icon={Pill} onClose={onClose}>
+      <div className="space-y-3">
+        {c.mascotas.length > 1 ? (
+          <Etiqueta texto="Mascota">
+            <select value={mascota} onChange={(e) => setMascota(e.target.value)} className={campo}>
+              {c.mascotas.map((m) => (
+                <option key={m.nombre}>{m.nombre}</option>
+              ))}
+            </select>
+          </Etiqueta>
+        ) : (
+          <p className="rounded-lg bg-surface px-3 py-2 text-[13px]">
+            <b>{mascota}</b> · {c.mascotas[0].especie} · {c.mascotas[0].raza} · {c.mascotas[0].edad}
+          </p>
+        )}
+
+        <div>
+          <span className="mb-1 block text-[12px] font-semibold text-[var(--text-2)]">Medicamentos *</span>
+          <div className="space-y-2">
+            {items.map((it, i) => (
+              <div key={i} className="rounded-xl border border-line p-2.5">
+                <div className="flex items-center gap-2">
+                  <Pill size={15} className="shrink-0 text-[var(--clinica)]" />
+                  <input
+                    value={it.medicamento}
+                    onChange={(e) => editar(i, { medicamento: e.target.value })}
+                    placeholder="Medicamento y presentación"
+                    className={cn(campo, "flex-1 font-semibold")}
+                    autoFocus={i === 0}
+                  />
+                  {items.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setItems((xs) => xs.filter((_, j) => j !== i))}
+                      aria-label="Quitar medicamento"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--text-3)] hover:bg-rose-50 hover:text-rose-600"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <input value={it.dosis} onChange={(e) => editar(i, { dosis: e.target.value })} placeholder="Dosis" className={campo} />
+                  <input value={it.frecuencia} onChange={(e) => editar(i, { frecuencia: e.target.value })} placeholder="Frecuencia" className={campo} />
+                  <input value={it.duracion} onChange={(e) => editar(i, { duracion: e.target.value })} placeholder="Duración (ej. 7 días)" className={campo} />
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setItems((xs) => [...xs, vacio()])}
+              className="inline-flex items-center gap-1 rounded-lg border border-dashed border-[var(--border-2)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--text-2)] hover:bg-surface"
+            >
+              <Plus size={14} /> Agregar medicamento
+            </button>
+          </div>
+        </div>
+
+        <Etiqueta texto="Indicaciones">
+          <textarea value={indicaciones} onChange={(e) => setIndicaciones(e.target.value)} rows={2} placeholder="Cuidados, dieta, cuándo volver…" className={campo} />
+        </Etiqueta>
+
+        <p className="flex items-start gap-1.5 rounded-lg bg-surface px-3 py-2 text-[11.5px] text-[var(--text-3)]">
+          <ShieldCheck size={13} className="mt-0.5 shrink-0" />
+          Sale en PDF por WhatsApp a {c.nombre} ({c.telefono}). Si el cliente tiene dudas, Luna lo pasa a la clínica: no explica tratamientos.
+        </p>
+      </div>
+      <div className="mt-4 flex items-center justify-between gap-2">
+        <span className="text-[12px] text-[var(--text-3)]">{STAFF.veterinario.nombre}</span>
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-1.5 text-[13px] font-semibold hover:bg-surface">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={enviar}
+            disabled={!validos.length}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--clinica)] px-3 py-1.5 text-[13px] font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Send size={14} /> Enviar por WhatsApp
           </button>
         </div>
       </div>
