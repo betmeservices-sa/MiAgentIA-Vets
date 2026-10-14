@@ -2,16 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BellRing, CalendarCheck, CalendarClock, Check, MessageCircle, MessageCircleQuestion, Stethoscope, type LucideIcon } from "lucide-react";
+import { BellRing, CalendarCheck, CalendarClock, CalendarDays, Check, MessageCircle, MessageCircleQuestion, Scissors, Stethoscope, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { diasDesde, etiquetaDia, isoDeTexto } from "@/lib/format";
-import { CITAS, cliente, nombreMascota } from "@/lib/seed";
-import { pasaFiltro, useStore } from "@/lib/store";
+import { AGENDA_INFO, diasDesde, etiquetaDia, isoDeTexto } from "@/lib/format";
+import { CALENDARIOS, CITAS, cliente, nombreMascota } from "@/lib/seed";
+import { horario } from "@/lib/agenda";
+import { useStore } from "@/lib/store";
 import type { Agenda, EstadoCita } from "@/lib/types";
-import { AgendaPill, EstadoCitaPill, FiltroAgendaToggle, PageHeader } from "@/components/ui";
+import { EstadoCitaPill, PageHeader } from "@/components/ui";
 
 // Recordatorios internos de la clínica: lo que el equipo tiene que hacer hoy,
-// mañana y pasado según el calendario. Sobre todo citas, más los pendientes
+// mañana y pasado, separado por calendario (clínica y grooming). Sobre todo citas, más los pendientes
 // que salen de ellas (confirmar, controles que dejó el veterinario, dudas de
 // recetas).
 
@@ -47,10 +48,11 @@ function queHacer(estado: EstadoCita, agenda: Agenda) {
 
 export default function RecordatoriosPage() {
   const router = useRouter();
-  const { filtro, visitas, resumenes, recetas, conversacionDe, setConvSel, citasVersion } = useStore();
+  const { visitas, resumenes, recetas, conversacionDe, setConvSel, citasVersion } = useStore();
   const [hechos, setHechos] = useState<Set<string>>(new Set());
+  const [cat, setCat] = useState<Agenda>("clinica");
 
-  const pendientes = useMemo(() => {
+  const todos = useMemo(() => {
     const out: Pendiente[] = [];
     // Citas de hoy a pasado mañana.
     for (const c of CITAS) {
@@ -73,8 +75,11 @@ export default function RecordatoriosPage() {
       const r = resumenes[v.id];
       const n = Number(r?.proximoControl.match(/^En (\d+) días/)?.[1]);
       if (!r || !n) continue;
-      const dia = n - diasDesde(v.fecha);
-      if (dia < 0 || dia > 2) continue;
+      // Si el control cae en un día sin atención, pasa al siguiente que sí atiende.
+      let dia = n - diasDesde(v.fecha);
+      if (dia < 0) continue;
+      while (dia <= 2 && !horario("clinica", dia)) dia++;
+      if (dia > 2) continue;
       const tieneCita = CITAS.some((c) => c.clienteId === v.clienteId && c.mascota === v.mascota && c.agenda === "clinica" && c.dia >= 0 && c.dia <= dia + 1);
       if (tieneCita) continue;
       const cli = cliente(v.clienteId);
@@ -105,9 +110,12 @@ export default function RecordatoriosPage() {
       });
     }
     // Primero lo sin hora (tareas del día), luego por hora.
-    return out.filter((p) => pasaFiltro(filtro, p.agenda)).sort((a, b) => a.dia - b.dia || (a.hora || "00:00").localeCompare(b.hora || "00:00"));
+    return out.sort((a, b) => a.dia - b.dia || (a.hora || "00:00").localeCompare(b.hora || "00:00"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtro, visitas, resumenes, recetas, citasVersion]);
+  }, [visitas, resumenes, recetas, citasVersion]);
+  const pendientes = todos.filter((p) => p.agenda === cat);
+  const cal = CALENDARIOS[cat];
+  const faltanDe = (a: Agenda) => todos.filter((p) => p.agenda === a && !hechos.has(p.id)).length;
 
   const alternar = (id: string) =>
     setHechos((s) => {
@@ -123,10 +131,46 @@ export default function RecordatoriosPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <PageHeader title="Recordatorios" sub="Pendientes de la clínica según el calendario: citas y lo que hay que hacer con ellas." right={<FiltroAgendaToggle />} />
+      <PageHeader
+        title="Recordatorios"
+        sub="Pendientes de la clínica por calendario: citas y lo que hay que hacer con ellas."
+        right={
+          <div className="inline-flex rounded-xl border border-line bg-card p-1 shadow-sm">
+            {(["clinica", "grooming"] as Agenda[]).map((a) => {
+              const n = faltanDe(a);
+              return (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => setCat(a)}
+                  aria-pressed={cat === a}
+                  className={cn("inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition", cat === a ? "text-white shadow-sm" : "text-[var(--text-2)] hover:bg-surface")}
+                  style={cat === a ? { backgroundColor: AGENDA_INFO[a].color } : undefined}
+                >
+                  {a === "clinica" ? <Stethoscope size={14} /> : <Scissors size={14} />}
+                  {a === "clinica" ? "Clínica" : "Grooming"}
+                  {n > 0 && <span className={cn("rounded-full px-1.5 text-[11px] font-bold", cat === a ? "bg-white/25" : "bg-surface-2")}>{n}</span>}
+                </button>
+              );
+            })}
+          </div>
+        }
+      />
       <div className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
+        <div className="flex items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 shadow-sm" style={{ borderLeft: `4px solid ${AGENDA_INFO[cat].color}` }}>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white" style={{ backgroundColor: AGENDA_INFO[cat].color }}>
+            <CalendarDays size={18} />
+          </span>
+          <div className="min-w-0 text-[12.5px] leading-tight">
+            <p className="text-[14px] font-bold">{cal.nombre}</p>
+            <p className="text-[var(--text-3)]">
+              {cal.cuenta} · {cal.horario}
+            </p>
+          </div>
+        </div>
         {DIAS.map((d) => {
           const delDia = pendientes.filter((p) => p.dia === d);
+          const abierto = !!horario(cat, d);
           const faltan = delDia.filter((p) => !hechos.has(p.id)).length;
           return (
             <section key={d}>
@@ -137,7 +181,11 @@ export default function RecordatoriosPage() {
                 </h2>
                 <span className="text-[12.5px] text-[var(--text-3)]">{faltan === 0 ? "Todo listo" : `${faltan} pendiente${faltan === 1 ? "" : "s"}`}</span>
               </div>
-              {delDia.length === 0 && <p className="rounded-xl border border-dashed border-line p-4 text-center text-[13px] text-[var(--text-3)]">Nada agendado.</p>}
+              {delDia.length === 0 && (
+                <p className="rounded-xl border border-dashed border-line p-4 text-center text-[13px] text-[var(--text-3)]">
+                  {abierto ? "Nada agendado." : `Sin atención este día en el calendario de ${cat === "clinica" ? "clínica" : "grooming"}.`}
+                </p>
+              )}
               <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
                 {delDia.map((p) => {
                   const hecho = hechos.has(p.id);
@@ -163,7 +211,6 @@ export default function RecordatoriosPage() {
                           <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] font-bold", t.className)}>
                             <t.Icon size={11} /> {t.label}
                           </span>
-                          <AgendaPill agenda={p.agenda} />
                           {p.estado && p.tipo === "cita" && <EstadoCitaPill estado={p.estado} />}
                         </div>
                         <p className={cn("mt-1 text-[13.5px] font-semibold", hecho && "line-through")}>{p.titulo}</p>
