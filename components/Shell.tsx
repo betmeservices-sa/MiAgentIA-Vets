@@ -128,8 +128,9 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
   );
 }
 
-// Dropdown de recordatorios: conversaciones que esperan a la clínica (con la
-// burbuja roja) y los recordatorios de cita de hoy, mañana y pasado.
+// Dropdown de recordatorios: conversaciones que esperan a la clínica (burbuja
+// roja) y los recordatorios de cita de hoy, mañana y pasado (burbuja naranja,
+// citas por confirmar).
 function Recordatorios() {
   const [abierto, setAbierto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -178,10 +179,18 @@ function Recordatorios() {
         <ChevronDown size={14} className={cn("hidden transition md:block", abierto && "rotate-180")} />
         {esperando.length > 0 && (
           <span
-            className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#dc2626] px-1 text-[10.5px] font-bold text-white ring-2 ring-card"
-            title={`${esperando.length} conversaciones esperan a la clínica`}
+            className="absolute -left-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#dc2626] px-1 text-[10.5px] font-bold text-white ring-2 ring-card"
+            title={`${esperando.length} conversaciones esperan respuesta urgente de la clínica`}
           >
             {esperando.length}
+          </span>
+        )}
+        {pendientes > 0 && (
+          <span
+            className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10.5px] font-bold text-white ring-2 ring-card"
+            title={`${pendientes} citas por confirmar`}
+          >
+            {pendientes}
           </span>
         )}
       </button>
