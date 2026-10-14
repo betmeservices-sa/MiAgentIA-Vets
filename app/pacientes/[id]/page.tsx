@@ -83,14 +83,14 @@ function Ficha({ c }: { c: Cliente }) {
     <div className="min-h-0 flex-1 overflow-y-auto p-3 outline-none sm:p-4">
       <div className="grid gap-4 lg:grid-cols-[290px_minmax(0,1fr)] 2xl:grid-cols-[290px_minmax(0,1fr)_300px]">
         <div className="space-y-4">
-          <Contacto c={c} visitas={suyas} acciones={acciones} />
+          <Contacto c={c} acciones={acciones} />
         </div>
         <div className="min-w-0 lg:row-span-2 2xl:row-span-1">
           <Centro c={c} tab={tab} setTab={setTab} visitas={suyas} acciones={acciones} />
         </div>
         <div className="space-y-4 lg:col-start-1 2xl:col-start-3 2xl:row-start-1">
           <Mascotas c={c} visitas={suyas} />
-          <ProximasCitas c={c} agendar={agendar} />
+          <ProximasCitas c={c} />
           <ConversacionCard conv={conv} abrir={abrirConversacion} />
         </div>
       </div>
@@ -149,7 +149,7 @@ interface Acciones {
 
 /* ---------- Columna izquierda: dueño ---------- */
 
-function Contacto({ c, visitas, acciones }: { c: Cliente; visitas: Visita[]; acciones: Acciones }) {
+function Contacto({ c, acciones }: { c: Cliente; acciones: Acciones }) {
 
   const rapidas: { label: string; Icon: typeof Mail; onClick?: () => void; href?: string }[] = [
     { label: "Receta", Icon: Pill, onClick: acciones.receta },
@@ -220,75 +220,7 @@ function Contacto({ c, visitas, acciones }: { c: Cliente; visitas: Visita[]; acc
         </div>
       </section>
 
-      <ResumenCliente c={c} visitas={visitas} />
-
     </>
-  );
-}
-
-/** Resumen del cliente en pocas líneas, armado con su historial. */
-function ResumenCliente({ c, visitas }: { c: Cliente; visitas: Visita[] }) {
-  const { recetas, resumenes } = useStore();
-  const [abierto, setAbierto] = useState(true);
-  const orden = [...visitas].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.hora.localeCompare(a.hora));
-  const primera = orden[orden.length - 1];
-  const ultima = orden[0];
-  const conResumen = orden.find((v) => resumenes[v.id]);
-  const proxima = CITAS.filter((x) => x.clienteId === c.id && x.dia >= 0 && !["completada", "cancelada", "reagendada"].includes(x.estado)).sort(
-    (a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora),
-  )[0];
-  const enCurso = recetas.filter((r) => r.clienteId === c.id && recetaEnCurso(r));
-  const nClinica = visitas.filter((v) => v.agenda === "clinica").length;
-  const nGrooming = visitas.filter((v) => v.agenda === "grooming").length;
-
-  const puntos: ReactNode[] = [
-    primera ? <>Cliente desde <b>{mesLegible(primera.fecha).toLowerCase()}</b>.</> : <>Cliente nuevo, todavía sin visitas.</>,
-    nClinica + nGrooming > 0 && (
-      <>
-        <b>{nClinica}</b> {nClinica === 1 ? "visita" : "visitas"} a clínica y <b>{nGrooming}</b> a grooming.
-      </>
-    ),
-    ultima && (
-      <>
-        Última visita: <b>{fechaLegible(ultima.fecha)}</b>, {ultima.servicio.toLowerCase()} de {ultima.mascota}.
-      </>
-    ),
-    conResumen && (
-      <>
-        Último diagnóstico ({conResumen.mascota}): <b>{resumenes[conResumen.id].diagnostico}</b>.
-      </>
-    ),
-    enCurso.length > 0 && (
-      <>
-        En tratamiento: <b>{[...new Set(enCurso.flatMap((r) => r.items.map((i) => i.medicamento.split(" (")[0])))].join(", ")}</b>.
-      </>
-    ),
-    proxima ? (
-      <>
-        Próxima cita: <b>{etiquetaDia(proxima.dia).toLowerCase()} {proxima.hora}</b>, {proxima.servicio.toLowerCase()} ({AGENDA_INFO[proxima.agenda].label.toLowerCase()}).
-      </>
-    ) : (
-      <>Sin citas próximas.</>
-    ),
-  ].filter(Boolean);
-
-  return (
-    <section className="rounded-2xl border border-line bg-card shadow-sm">
-      <button type="button" onClick={() => setAbierto((a) => !a)} className="flex w-full items-center gap-2 px-4 py-3 text-left">
-        <ChevronDown size={16} className={cn("transition", !abierto && "-rotate-90")} />
-        <span className="text-[14px] font-bold">Resumen del cliente</span>
-      </button>
-      {abierto && (
-        <ul className="space-y-1.5 border-t border-line px-4 py-3 text-[13px] leading-snug text-[var(--text-2)]">
-          {puntos.map((p, i) => (
-            <li key={i} className="flex gap-2">
-              <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
-              <span>{p}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   );
 }
 
@@ -988,25 +920,12 @@ function Mascotas({ c, visitas }: { c: Cliente; visitas: Visita[] }) {
   );
 }
 
-function ProximasCitas({ c, agendar }: { c: Cliente; agendar: (a: Agenda) => void }) {
+function ProximasCitas({ c }: { c: Cliente }) {
   const proximas = CITAS.filter((x) => x.clienteId === c.id && x.dia >= 0 && !["completada", "cancelada", "reagendada"].includes(x.estado)).sort(
     (a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora),
   );
   return (
-    <Lateral
-      titulo={`Próximas citas (${proximas.length})`}
-      accion={
-        <Menu
-          label="Agendar"
-          Icon={Plus}
-          compacto
-          items={[
-            { label: "En veterinaria", onClick: () => agendar("clinica") },
-            { label: "En grooming", onClick: () => agendar("grooming") },
-          ]}
-        />
-      }
-    >
+    <Lateral titulo={`Próximas citas (${proximas.length})`}>
       {proximas.length === 0 ? (
         <div className="py-4 text-center text-[12.5px] text-[var(--text-3)]">
           <CalendarPlus size={26} className="mx-auto mb-2 opacity-50" />
