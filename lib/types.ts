@@ -154,6 +154,8 @@ export interface Receta {
   /** Fecha de la consulta, como se muestra en el perfil del cliente. */
   fecha?: string;
   estado: EstadoReceta;
+  /** Por dónde se le envió al cliente (WhatsApp si no se indica). */
+  canal?: "whatsapp" | "correo";
 }
 
 /** Resumen que escribe el veterinario al cerrar una consulta. Es interno: Luna no lo envía ni lo explica al cliente. */

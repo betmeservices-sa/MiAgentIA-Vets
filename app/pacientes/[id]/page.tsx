@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ClipboardPen,
   Copy,
+  Download,
   FileText,
   Mail,
   MessageCircle,
@@ -30,6 +31,7 @@ import { useStore } from "@/lib/store";
 import type { Agenda, Cita, Cliente, Conversacion, Nota, Receta, Visita } from "@/lib/types";
 import { AgendaPill, Avatar, ChannelBadge, EstadoCitaPill } from "@/components/ui";
 import { Menu, NotaModal, RecetaModal, ResumenBloque, ResumenModal } from "@/components/ResumenConsulta";
+import { descargarReceta, nombreArchivo } from "@/lib/recetaPdf";
 
 // Ficha del paciente al estilo CRM: datos del dueño a la izquierda, actividad
 // e historial clínico al centro, mascotas y próximas citas a la derecha.
@@ -55,12 +57,13 @@ function Ficha({ c }: { c: Cliente }) {
   const { conversacionDe, setConvSel, setCalendario, setDiaCalendario, visitas, conversaciones } = useStore();
   const [modal, setModal] = useState<Modal>(null);
   const [tab, setTab] = useState<Tab>("overview");
-  const [agendada, setAgendada] = useState<Cita | null>(null);
+  // Aviso al pie: cita agendada desde un resumen o receta enviada.
+  const [aviso, setAviso] = useState<{ tipo: "cita"; cita: Cita } | { tipo: "receta"; receta: Receta } | null>(null);
   useEffect(() => {
-    if (!agendada) return;
-    const t = setTimeout(() => setAgendada(null), 8000);
+    if (!aviso) return;
+    const t = setTimeout(() => setAviso(null), 8000);
     return () => clearTimeout(t);
-  }, [agendada]);
+  }, [aviso]);
 
   const suyas = useMemo(() => visitas.filter((v) => v.clienteId === c.id), [visitas, c.id]);
   const conv = conversaciones.find((x) => x.clienteId === c.id);
@@ -92,23 +95,46 @@ function Ficha({ c }: { c: Cliente }) {
         </div>
       </div>
 
-      {modal?.tipo === "resumen" && <ResumenModal c={c} visita={modal.visita} onClose={() => setModal(null)} onAgendada={setAgendada} />}
-      {agendada && (
+      {modal?.tipo === "resumen" && <ResumenModal c={c} visita={modal.visita} onClose={() => setModal(null)} onAgendada={(cita) => setAviso({ tipo: "cita", cita })} />}
+      {aviso && (
         <div role="status" className="fixed bottom-4 left-1/2 z-[70] flex w-[min(520px,calc(100vw-32px))] -translate-x-1/2 items-center gap-3 rounded-xl bg-[var(--text)] px-4 py-3 text-[13px] text-white shadow-2xl">
-          <CalendarPlus size={18} className="shrink-0" />
+          {aviso.tipo === "cita" ? <CalendarPlus size={18} className="shrink-0" /> : <Pill size={18} className="shrink-0" />}
           <span className="min-w-0 flex-1">
-            Cita agendada: <b>{agendada.servicio}</b> de {agendada.mascota}, {etiquetaDia(agendada.dia).toLowerCase()} a las {agendada.hora}.
+            {aviso.tipo === "cita" ? (
+              <>
+                Cita agendada: <b>{aviso.cita.servicio}</b> de {aviso.cita.mascota}, {etiquetaDia(aviso.cita.dia).toLowerCase()} a las {aviso.cita.hora}.
+              </>
+            ) : (
+              <>
+                Receta de <b>{aviso.receta.mascota}</b> enviada por {aviso.receta.canal === "correo" ? `correo a ${c.correo}` : `WhatsApp al ${c.telefono}`}.
+              </>
+            )}
           </span>
-          <button type="button" onClick={() => agendar(agendada.agenda, agendada.dia)} className="shrink-0 font-bold text-violet-300 hover:underline">
-            Ver en calendario
-          </button>
-          <button type="button" onClick={() => setAgendada(null)} aria-label="Cerrar aviso" className="shrink-0 text-white/60 hover:text-white">
+          {aviso.tipo === "cita" ? (
+            <button type="button" onClick={() => agendar(aviso.cita.agenda, aviso.cita.dia)} className="shrink-0 font-bold text-violet-300 hover:underline">
+              Ver en calendario
+            </button>
+          ) : (
+            <button type="button" onClick={() => descargarReceta(aviso.receta)} className="shrink-0 font-bold text-violet-300 hover:underline">
+              Descargar PDF
+            </button>
+          )}
+          <button type="button" onClick={() => setAviso(null)} aria-label="Cerrar aviso" className="shrink-0 text-white/60 hover:text-white">
             <X size={16} />
           </button>
         </div>
       )}
       {modal?.tipo === "nota" && <NotaModal c={c} onClose={() => setModal(null)} />}
-      {modal?.tipo === "receta" && <RecetaModal c={c} onClose={() => setModal(null)} onEnviada={() => setTab("tratamientos")} />}
+      {modal?.tipo === "receta" && (
+        <RecetaModal
+          c={c}
+          onClose={() => setModal(null)}
+          onEnviada={(receta) => {
+            setTab("tratamientos");
+            setAviso({ tipo: "receta", receta });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -234,7 +260,7 @@ function ResumenCliente({ c, visitas }: { c: Cliente; visitas: Visita[] }) {
     ),
     enCurso.length > 0 && (
       <>
-        En tratamiento: <b>{enCurso.flatMap((r) => r.items.map((i) => i.medicamento.split(" (")[0])).join(", ")}</b>.
+        En tratamiento: <b>{[...new Set(enCurso.flatMap((r) => r.items.map((i) => i.medicamento.split(" (")[0])))].join(", ")}</b>.
       </>
     ),
     proxima ? (
@@ -405,7 +431,7 @@ function Cifra({ Icon, valor, label, color, onClick }: { Icon: typeof Mail; valo
 /* Tratamientos */
 
 const ESTADO_RX: Record<Receta["estado"], { label: string; className: string }> = {
-  enviada: { label: "Enviada por WhatsApp", className: "bg-slate-100 text-slate-700" },
+  enviada: { label: "Enviada", className: "bg-slate-100 text-slate-700" },
   leida: { label: "Leída por el cliente", className: "bg-sky-50 text-sky-700" },
   duda: { label: "Cliente con duda", className: "bg-rose-50 text-rose-700" },
 };
@@ -481,7 +507,17 @@ function TabTratamientos({ c, nueva }: { c: Cliente; nueva: () => void }) {
                   <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", curso ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600")}>
                     {curso ? "En curso" : "Finalizado"}
                   </span>
-                  <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", ESTADO_RX[r.estado].className)}>{ESTADO_RX[r.estado].label}</span>
+                  <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", ESTADO_RX[r.estado].className)}>
+                    {r.estado === "enviada" ? `Enviada por ${r.canal === "correo" ? "correo" : "WhatsApp"}` : ESTADO_RX[r.estado].label}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => descargarReceta(r)}
+                    title={`Descargar ${nombreArchivo(r)}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[11px] font-semibold text-[var(--text-2)] hover:bg-surface"
+                  >
+                    <Download size={11} /> PDF
+                  </button>
                 </div>
               </div>
               {dx && (

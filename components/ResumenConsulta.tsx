@@ -2,13 +2,15 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CalendarPlus, ChevronDown, ClipboardPen, NotebookPen, Pill, Plus, Send, ShieldCheck, Trash2, X, type LucideIcon } from "lucide-react";
+import { CalendarPlus, ChevronDown, ClipboardPen, Download, Eye, Mail, NotebookPen, Pill, Plus, ShieldCheck, Trash2, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { espaciosLibres, horario } from "@/lib/agenda";
 import { AGENDA_INFO, etiquetaDia, fechaDe, fechaLegible, iso } from "@/lib/format";
 import { STAFF } from "@/lib/seed";
 import { ahora, useStore } from "@/lib/store";
-import type { Agenda, Cita, Cliente, ItemReceta, ResumenConsulta, Visita } from "@/lib/types";
+import { descargarReceta, nombreArchivo, verReceta } from "@/lib/recetaPdf";
+import type { Agenda, Cita, Cliente, ItemReceta, Receta, ResumenConsulta, Visita } from "@/lib/types";
+import { WhatsappIcon } from "./glifos";
 
 /** Resumen de consulta en solo lectura. */
 export function ResumenBloque({ r, className }: { r: ResumenConsulta; className?: string }) {
@@ -359,10 +361,10 @@ export function ResumenModal({
 const vacio = (): ItemReceta => ({ medicamento: "", dosis: "", frecuencia: "", duracion: "" });
 
 /**
- * Receta desde la ficha del paciente: el veterinario la escribe y sale en PDF
- * por WhatsApp. Queda en Tratamientos.
+ * Receta desde la ficha del paciente: el veterinario la escribe, revisa el PDF
+ * y lo envía por WhatsApp o por correo. Queda en Tratamientos.
  */
-export function RecetaModal({ c, onClose, onEnviada }: { c: Cliente; onClose: () => void; onEnviada?: () => void }) {
+export function RecetaModal({ c, onClose, onEnviada }: { c: Cliente; onClose: () => void; onEnviada?: (r: Receta) => void }) {
   const { agregarReceta } = useStore();
   const [mascota, setMascota] = useState(c.mascotas[0].nombre);
   const [items, setItems] = useState<ItemReceta[]>([vacio()]);
@@ -371,19 +373,23 @@ export function RecetaModal({ c, onClose, onEnviada }: { c: Cliente; onClose: ()
   const editar = (i: number, cambio: Partial<ItemReceta>) => setItems((xs) => xs.map((x, j) => (j === i ? { ...x, ...cambio } : x)));
   const campo = "w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--clinica)]";
 
-  const enviar = () => {
+  const receta = (canal?: Receta["canal"]): Receta => ({
+    id: `rx${Date.now()}`,
+    clienteId: c.id,
+    mascota,
+    hora: ahora(),
+    fecha: "Hoy",
+    items: validos.map((i) => ({ medicamento: i.medicamento.trim(), dosis: i.dosis.trim(), frecuencia: i.frecuencia.trim(), duracion: i.duracion.trim() })),
+    indicaciones: indicaciones.trim() || undefined,
+    estado: "enviada",
+    canal,
+  });
+
+  const enviar = (canal: "whatsapp" | "correo") => {
     if (!validos.length) return;
-    agregarReceta({
-      id: `rx${Date.now()}`,
-      clienteId: c.id,
-      mascota,
-      hora: ahora(),
-      fecha: "Hoy",
-      items: validos.map((i) => ({ ...i, medicamento: i.medicamento.trim() })),
-      indicaciones: indicaciones.trim() || undefined,
-      estado: "enviada",
-    });
-    onEnviada?.();
+    const r = receta(canal);
+    agregarReceta(r);
+    onEnviada?.(r);
     onClose();
   };
 
@@ -439,9 +445,9 @@ export function RecetaModal({ c, onClose, onEnviada }: { c: Cliente; onClose: ()
             <button
               type="button"
               onClick={() => setItems((xs) => [...xs, vacio()])}
-              className="inline-flex items-center gap-1 rounded-lg border border-dashed border-[var(--border-2)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--text-2)] hover:bg-surface"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-[var(--clinica)]/50 bg-[var(--clinica-soft)]/50 px-3 py-2 text-[13px] font-bold text-[var(--clinica)] hover:bg-[var(--clinica-soft)]"
             >
-              <Plus size={14} /> Agregar medicamento
+              <Plus size={16} /> Agregar otro medicamento
             </button>
           </div>
         </div>
@@ -450,26 +456,63 @@ export function RecetaModal({ c, onClose, onEnviada }: { c: Cliente; onClose: ()
           <textarea value={indicaciones} onChange={(e) => setIndicaciones(e.target.value)} rows={2} placeholder="Cuidados, dieta, cuándo volver…" className={campo} />
         </Etiqueta>
 
+        <div className="rounded-xl border border-line p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex min-w-0 items-center gap-2 text-[13px] font-semibold">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-[10px] font-extrabold text-rose-600">PDF</span>
+              <span className="truncate">{validos.length ? nombreArchivo(receta()) : "La receta se arma al agregar medicamentos"}</span>
+            </p>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => verReceta(receta())}
+                disabled={!validos.length}
+                className="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] font-semibold hover:bg-surface disabled:opacity-40"
+              >
+                <Eye size={14} /> Ver
+              </button>
+              <button
+                type="button"
+                onClick={() => descargarReceta(receta())}
+                disabled={!validos.length}
+                className="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-[12.5px] font-semibold hover:bg-surface disabled:opacity-40"
+              >
+                <Download size={14} /> Descargar
+              </button>
+            </div>
+          </div>
+        </div>
+
         <p className="flex items-start gap-1.5 rounded-lg bg-surface px-3 py-2 text-[11.5px] text-[var(--text-3)]">
           <ShieldCheck size={13} className="mt-0.5 shrink-0" />
-          Sale en PDF por WhatsApp a {c.nombre} ({c.telefono}). Si el cliente tiene dudas, Luna lo pasa a la clínica: no explica tratamientos.
+          Si el cliente tiene dudas sobre el tratamiento, Luna lo pasa a la clínica: no explica tratamientos.
         </p>
       </div>
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <span className="text-[12px] text-[var(--text-3)]">{STAFF.veterinario.nombre}</span>
-        <div className="flex gap-2">
-          <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-1.5 text-[13px] font-semibold hover:bg-surface">
-            Cancelar
+      <div className="mt-4 border-t border-line pt-4">
+        <p className="mb-2 text-[12px] font-semibold text-[var(--text-2)]">Enviar el PDF a {c.nombre} · {STAFF.veterinario.nombre}</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => enviar("whatsapp")}
+            disabled={!validos.length}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#1ba34d] px-3 py-2.5 text-[13px] font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <WhatsappIcon size={16} />
+            <span className="truncate">WhatsApp · {c.telefono}</span>
           </button>
           <button
             type="button"
-            onClick={enviar}
+            onClick={() => enviar("correo")}
             disabled={!validos.length}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--clinica)] px-3 py-1.5 text-[13px] font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2.5 text-[13px] font-bold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <Send size={14} /> Enviar por WhatsApp
+            <Mail size={16} />
+            <span className="truncate">Correo · {c.correo}</span>
           </button>
         </div>
+        <button type="button" onClick={onClose} className="mt-2 w-full rounded-lg py-1.5 text-[12.5px] font-semibold text-[var(--text-3)] hover:bg-surface">
+          Cancelar
+        </button>
       </div>
     </Modal>
   );
