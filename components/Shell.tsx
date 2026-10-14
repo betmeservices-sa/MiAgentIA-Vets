@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  AlertTriangle,
   BarChart3,
   BellRing,
   CalendarDays,
@@ -20,10 +19,11 @@ import {
   Users,
   X,
   Send,
+  Siren,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { AGENDA_INFO, etiquetaDia, MOTIVO } from "@/lib/format";
+import { AGENDA_INFO, etiquetaDia } from "@/lib/format";
 import { CITAS, CLINICA, cliente } from "@/lib/seed";
 import { StoreProvider, useStore } from "@/lib/store";
 import type { Agenda } from "@/lib/types";
@@ -121,22 +121,18 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Urgencias />
         <Recordatorios />
       </div>
     </div>
   );
 }
 
-// Dropdown de recordatorios: conversaciones que esperan a la clínica (burbuja
-// roja) y los recordatorios de cita de hoy, mañana y pasado (burbuja naranja,
-// citas por confirmar).
-function Recordatorios() {
+/** Abre y cierra un dropdown; se cierra al hacer clic fuera o con Escape. */
+function useDropdown() {
   const [abierto, setAbierto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const router = useRouter();
-  const { conversacionDe, setConvSel, conversaciones } = useStore();
-
   useEffect(() => {
     if (!abierto) return;
     const fuera = (e: MouseEvent) => {
@@ -150,91 +146,151 @@ function Recordatorios() {
       document.removeEventListener("keydown", esc);
     };
   }, [abierto]);
+  return { abierto, setAbierto, ref };
+}
 
-  const proximas = CITAS.filter((c) => c.dia >= 0 && c.dia <= 2 && c.estado !== "completada").sort((a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora));
-  const pendientes = proximas.filter((c) => c.estado === "por_confirmar").length;
-  // Primero las urgencias, luego las que llevan más tiempo esperando.
+function BotonAviso({
+  abierto,
+  onClick,
+  Icon,
+  label,
+  n,
+  color,
+  titulo,
+  tono,
+}: {
+  abierto: boolean;
+  onClick: () => void;
+  Icon: LucideIcon;
+  label: string;
+  n: number;
+  color: string;
+  titulo: string;
+  tono: "rojo" | "neutro";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={abierto}
+      className={cn(
+        "relative flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[12.5px] font-semibold transition",
+        abierto
+          ? tono === "rojo"
+            ? "border-rose-300 bg-rose-50 text-rose-700"
+            : "border-brand/50 bg-brand/5 text-brand"
+          : tono === "rojo" && n > 0
+            ? "border-rose-200 text-rose-700 hover:bg-rose-50"
+            : "border-line text-[var(--text-2)] hover:bg-surface",
+      )}
+    >
+      <Icon size={16} />
+      <span className="hidden md:inline">{label}</span>
+      <ChevronDown size={14} className={cn("hidden transition md:block", abierto && "rotate-180")} />
+      {n > 0 && (
+        <span
+          className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10.5px] font-bold text-white ring-2 ring-card"
+          style={{ backgroundColor: color }}
+          title={titulo}
+        >
+          {n}
+        </span>
+      )}
+    </button>
+  );
+}
+
+// Urgencias: conversaciones que Luna pasó a la clínica y esperan respuesta.
+// Solo cliente y mascota; al tocar una se abre en la bandeja.
+function Urgencias() {
+  const { abierto, setAbierto, ref } = useDropdown();
+  const router = useRouter();
+  const { conversaciones, setConvSel } = useStore();
   const esperando = conversaciones
     .filter((c) => c.estado === "transferida")
     .sort((a, b) => Number(b.motivo === "urgencia") - Number(a.motivo === "urgencia") || (b.esperaMin ?? 0) - (a.esperaMin ?? 0));
-  const abrir = (id: string) => {
-    setConvSel(id);
-    setAbierto(false);
-    router.push("/");
-  };
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
+      <BotonAviso
+        abierto={abierto}
         onClick={() => setAbierto((a) => !a)}
-        aria-expanded={abierto}
-        className={cn(
-          "relative flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[12.5px] font-semibold transition",
-          abierto ? "border-brand/50 bg-brand/5 text-brand" : "border-line text-[var(--text-2)] hover:bg-surface",
-        )}
-      >
-        <BellRing size={16} />
-        <span className="hidden md:inline">Recordatorios</span>
-        <ChevronDown size={14} className={cn("hidden transition md:block", abierto && "rotate-180")} />
-        {esperando.length > 0 && (
-          <span
-            className="absolute -left-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#dc2626] px-1 text-[10.5px] font-bold text-white ring-2 ring-card"
-            title={`${esperando.length} conversaciones esperan respuesta urgente de la clínica`}
-          >
-            {esperando.length}
-          </span>
-        )}
-        {pendientes > 0 && (
-          <span
-            className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10.5px] font-bold text-white ring-2 ring-card"
-            title={`${pendientes} citas por confirmar`}
-          >
-            {pendientes}
-          </span>
-        )}
-      </button>
+        Icon={Siren}
+        label="Urgencias"
+        n={esperando.length}
+        color="#dc2626"
+        titulo={`${esperando.length} conversaciones esperan respuesta urgente de la clínica`}
+        tono="rojo"
+      />
       {abierto && (
-        <div className="absolute right-0 z-40 mt-2 max-h-[80vh] w-[min(380px,calc(100vw-24px))] overflow-y-auto rounded-2xl border border-line bg-card shadow-xl">
-          {esperando.length > 0 && (
-            <div className="border-b border-line">
-              <div className="flex items-center justify-between bg-rose-50 px-4 py-3">
-                <p className="flex items-center gap-1.5 text-[14px] font-bold text-rose-800">
-                  <AlertTriangle size={15} /> Esperan a la clínica
-                </p>
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#dc2626] px-1.5 text-[11px] font-bold text-white">{esperando.length}</span>
-              </div>
-              <div className="divide-y divide-line">
-                {esperando.map((c) => {
-                  const cli = cliente(c.clienteId);
-                  const ultimo = [...c.mensajes].reverse().find((m) => m.autor === "cliente");
-                  return (
-                    <button key={c.id} type="button" onClick={() => abrir(c.id)} className="flex w-full items-start gap-3 px-4 py-2.5 text-left hover:bg-surface" title="Abrir la conversación">
-                      <span className="relative mt-0.5 shrink-0">
-                        <Avatar nombre={cli.nombre} size={32} />
-                        {c.noLeidos > 0 && (
-                          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#dc2626] px-1 text-[9.5px] font-bold text-white ring-2 ring-card">{c.noLeidos}</span>
-                        )}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center justify-between gap-2">
-                          <span className="truncate text-[13px] font-semibold">{cli.nombre}</span>
-                          <span className="shrink-0 text-[11.5px] text-[var(--text-3)]">{c.esperaMin} min</span>
-                        </span>
-                        {ultimo && <span className="block truncate text-[12px] text-[var(--text-2)]">{ultimo.texto}</span>}
-                        {c.motivo && <span className={cn("mt-1 inline-block rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold", MOTIVO[c.motivo].className)}>{MOTIVO[c.motivo].label}</span>}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+        <div className="absolute right-0 z-40 mt-2 max-h-[80vh] w-[min(340px,calc(100vw-24px))] overflow-y-auto rounded-2xl border border-line bg-card shadow-xl">
+          <div className="flex items-center justify-between bg-rose-50 px-4 py-3">
+            <div>
+              <p className="text-[14px] font-bold text-rose-800">Esperan respuesta de la clínica</p>
+              <p className="text-[12px] text-rose-700/80">Luna las pasó y dejó de responder</p>
             </div>
-          )}
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#dc2626] px-1.5 text-[11px] font-bold text-white">{esperando.length}</span>
+          </div>
+          {esperando.length === 0 && <p className="px-4 py-6 text-center text-[13px] text-[var(--text-3)]">Nada urgente por ahora.</p>}
+          <div className="divide-y divide-line">
+            {esperando.map((c) => {
+              const cli = cliente(c.clienteId);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    setConvSel(c.id);
+                    setAbierto(false);
+                    router.push("/");
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-surface"
+                  title="Abrir la conversación"
+                >
+                  <span className={cn("h-2 w-2 shrink-0 rounded-full", c.motivo === "urgencia" ? "bg-[#dc2626]" : "bg-amber-500")} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-semibold">{cli.nombre}</span>
+                    <span className="flex items-center gap-1 truncate text-[12px] text-[var(--text-2)]">
+                      <PawPrint size={11} className="shrink-0 text-[var(--text-3)]" /> {cli.mascotas.map((m) => m.nombre).join(", ")}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Recordatorios de cita según el calendario: hoy, mañana y pasado.
+function Recordatorios() {
+  const { abierto, setAbierto, ref } = useDropdown();
+  const router = useRouter();
+  const { conversacionDe, setConvSel } = useStore();
+  const proximas = CITAS.filter((c) => c.dia >= 0 && c.dia <= 2 && c.estado !== "completada").sort((a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora));
+  const pendientes = proximas.filter((c) => c.estado === "por_confirmar").length;
+
+  return (
+    <div ref={ref} className="relative">
+      <BotonAviso
+        abierto={abierto}
+        onClick={() => setAbierto((a) => !a)}
+        Icon={BellRing}
+        label="Recordatorios"
+        n={pendientes}
+        color="#f59e0b"
+        titulo={`${pendientes} citas por confirmar`}
+        tono="neutro"
+      />
+      {abierto && (
+        <div className="absolute right-0 z-40 mt-2 w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-line bg-card shadow-xl">
           <div className="border-b border-line px-4 py-3">
             <p className="text-[14px] font-bold">Recordatorios de cita</p>
             <p className="text-[12px] text-[var(--text-3)]">Hoy, mañana y pasado · {pendientes} por confirmar</p>
           </div>
-          <div className="divide-y divide-line">
+          <div className="max-h-[60vh] divide-y divide-line overflow-y-auto">
             {proximas.map((c) => (
               <button
                 key={c.id}
