@@ -50,9 +50,9 @@ export async function recetaPdf(r: Receta) {
   dato("Edad", m?.edad ?? "—", X);
   dato("Correo", cli.correo, X + W / 2);
 
-  // Rx
+  // Medicamentos
   y += 14;
-  doc.setFont("helvetica", "bold").setFontSize(26).setTextColor(...VERDE).text("Rx", X, y);
+  doc.setFont("helvetica", "bold").setFontSize(16).setTextColor(...VERDE).text("Medicamentos", X, y);
   y += 4;
   r.items.forEach((it, i) => {
     y += 9;
