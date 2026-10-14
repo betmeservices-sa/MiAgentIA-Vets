@@ -195,3 +195,36 @@ export interface Nota {
   hora: string;
   autor: string;
 }
+
+export type Red = "instagram" | "facebook";
+
+/** Publicación en redes sociales de la clínica. */
+export interface Post {
+  id: string;
+  redes: Red[];
+  texto: string;
+  /** Imagen subida (data URL) o diseño prediseñado. */
+  imagen?: string;
+  diseno?: { fondo: string; titulo: string };
+  estado: "publicada" | "programada";
+  /** Fecha ISO (AAAA-MM-DD). */
+  fecha: string;
+  hora: string;
+  stats?: { alcance: number; meGusta: number; comentarios: number; mensajes: number };
+}
+
+export type Segmento = "todos" | "clinica_inactivos" | "grooming_inactivos" | "perros" | "gatos";
+
+/** Campaña por WhatsApp (plantilla de marketing aprobada por Meta). */
+export interface Campana {
+  id: string;
+  nombre: string;
+  segmento: Segmento;
+  mensaje: string;
+  botones: string[];
+  estado: "enviada" | "programada";
+  fecha: string;
+  hora: string;
+  destinatarios: number;
+  stats?: { entregados: number; leidos: number; respondieron: number; citas: number };
+}

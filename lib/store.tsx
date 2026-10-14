@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { CITAS, CONVERSACIONES, NOTAS, RECETAS, RESUMENES, VISITAS, cliente } from "./seed";
-import type { Agenda, Cita, Conversacion, Mensaje, Nota, Receta, ResumenConsulta, Visita } from "./types";
+import { CAMPANAS, CITAS, CONVERSACIONES, NOTAS, POSTS, RECETAS, RESUMENES, VISITAS, cliente } from "./seed";
+import type { Agenda, Campana, Cita, Conversacion, Mensaje, Nota, Post, Receta, ResumenConsulta, Visita } from "./types";
 
 /** Filtro global: todo, solo clínica o solo grooming. */
 export type FiltroAgenda = "todas" | Agenda;
@@ -50,6 +50,10 @@ interface Estado {
   agregarCita: (c: Cita) => void;
   /** Sube cada vez que cambian las citas, para que las vistas se vuelvan a pintar. */
   citasVersion: number;
+  posts: Post[];
+  agregarPost: (p: Post) => void;
+  campanas: Campana[];
+  agregarCampana: (c: Campana) => void;
 }
 
 const Ctx = createContext<Estado | null>(null);
@@ -185,6 +189,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setCitasVersion((v) => v + 1);
   }, []);
 
+  // Marketing: publicaciones en redes y campañas por WhatsApp.
+  const [posts, setPosts] = useState<Post[]>(POSTS);
+  const [campanas, setCampanas] = useState<Campana[]>(CAMPANAS);
+  const agregarPost = useCallback((p: Post) => setPosts((ps) => [p, ...ps]), []);
+  const agregarCampana = useCallback((c: Campana) => setCampanas((cs) => [c, ...cs]), []);
+
   const conversacionDe = useCallback(
     (clienteId: string) => {
       const existente = conversaciones.find((c) => c.clienteId === clienteId);
@@ -212,7 +222,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ filtro, setFiltro, conversaciones, tomar, devolverAIA, resolver, enviar, marcarLeida, urgencias, agendarUrgencia, cerrarUrgencia, recetas, agregarReceta, calendario, setCalendario, diaCalendario, setDiaCalendario, convSel, setConvSel, conversacionDe, visitas, resumenes, guardarResumen, notas, agregarNota, agregarCita, citasVersion }}
+      value={{ filtro, setFiltro, conversaciones, tomar, devolverAIA, resolver, enviar, marcarLeida, urgencias, agendarUrgencia, cerrarUrgencia, recetas, agregarReceta, calendario, setCalendario, diaCalendario, setDiaCalendario, convSel, setConvSel, conversacionDe, visitas, resumenes, guardarResumen, notas, agregarNota, agregarCita, citasVersion, posts, agregarPost, campanas, agregarCampana }}
     >
       {children}
     </Ctx.Provider>

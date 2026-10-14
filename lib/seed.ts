@@ -10,6 +10,8 @@ import type {
   Visita,
   ResumenConsulta,
   Nota,
+  Post,
+  Campana,
 } from "./types";
 import { fechaDe, iso, isoDeTexto } from "./format";
 
@@ -687,4 +689,58 @@ export const NOTAS: Nota[] = [
   { id: "n1", clienteId: "c1", texto: "Prefiere citas temprano por la mañana. Max se pone nervioso con otros perros en sala de espera.", fecha: "2026-08-12", hora: "10:10", autor: "Recepción" },
   { id: "n2", clienteId: "c6", texto: "Pidió que le llamen antes de las 5 pm.", fecha: "2026-10-03", hora: "11:05", autor: "Recepción" },
   { id: "n3", clienteId: "c4", texto: "Trae a los 3 perros juntos. Consultó por descuento: lo autoriza la clínica.", fecha: "2026-08-02", hora: "07:50", autor: "Recepción" },
+];
+
+// Diseños prediseñados para posts (fondo + título sobre la imagen).
+export const DISENOS = [
+  { fondo: "linear-gradient(135deg,#0f766e,#14b8a6)", titulo: "Vacunación al día" },
+  { fondo: "linear-gradient(135deg,#b45309,#f59e0b)", titulo: "Día de grooming" },
+  { fondo: "linear-gradient(135deg,#7c3aed,#c084fc)", titulo: "Agenda por WhatsApp 24/7" },
+  { fondo: "linear-gradient(135deg,#be123c,#fb7185)", titulo: "Adopta, no compres" },
+];
+
+export const POSTS: Post[] = [
+  {
+    id: "p1", redes: ["instagram", "facebook"], estado: "publicada", fecha: "2026-10-10", hora: "18:00",
+    diseno: DISENOS[0],
+    texto: "¿Ya revisaste el carné de vacunas de tu mascota? 🐶🐱 Las vacunas al día la protegen de enfermedades graves. Escríbenos por WhatsApp y Luna te agenda en minutos. #Vacunación #ClínicaVeterinaria #Guatemala",
+    stats: { alcance: 2140, meGusta: 186, comentarios: 23, mensajes: 17 },
+  },
+  {
+    id: "p2", redes: ["instagram"], estado: "publicada", fecha: "2026-10-05", hora: "12:30",
+    diseno: DISENOS[1],
+    texto: "Así salió Peluche de su baño y corte ✂️✨ ¡Quedó listo para el fin de semana! Agenda el grooming de tu mascota por WhatsApp. #Grooming #ShihTzu",
+    stats: { alcance: 3380, meGusta: 412, comentarios: 41, mensajes: 26 },
+  },
+  {
+    id: "p3", redes: ["facebook"], estado: "publicada", fecha: "2026-09-28", hora: "09:00",
+    diseno: DISENOS[2],
+    texto: "Ahora puedes agendar tu cita a cualquier hora por WhatsApp: nuestra asistente Luna te responde al instante y te recuerda la cita un día antes. 📲",
+    stats: { alcance: 1520, meGusta: 98, comentarios: 12, mensajes: 31 },
+  },
+  {
+    id: "p4", redes: ["instagram", "facebook"], estado: "programada", fecha: "2026-10-17", hora: "10:00",
+    diseno: DISENOS[3],
+    texto: "Este sábado acompáñanos en la jornada de adopción junto a refugios de la ciudad 🐾 Habrá orientación para nuevos dueños. #AdoptaNoCompres",
+  },
+];
+
+export const CAMPANAS: Campana[] = [
+  {
+    id: "k1", nombre: "Mes de la desparasitación", segmento: "clinica_inactivos", estado: "enviada", fecha: "2026-10-01", hora: "10:00", destinatarios: 64,
+    mensaje: "Hola {{nombre}}, en Clínica Veterinaria Patitas este mes estamos recordando la desparasitación. ¿Quieres que agendemos a {{mascota}}?",
+    botones: ["Agendar cita", "Ahora no", "No recibir más"],
+    stats: { entregados: 62, leidos: 55, respondieron: 21, citas: 12 },
+  },
+  {
+    id: "k2", nombre: "Grooming de fin de mes", segmento: "grooming_inactivos", estado: "enviada", fecha: "2026-09-24", hora: "09:30", destinatarios: 38,
+    mensaje: "Hola {{nombre}}, ¿{{mascota}} ya necesita su baño? Tenemos espacios esta semana en grooming. ¿Te agendamos?",
+    botones: ["Agendar cita", "Ahora no", "No recibir más"],
+    stats: { entregados: 38, leidos: 33, respondieron: 14, citas: 9 },
+  },
+  {
+    id: "k3", nombre: "Chequeo anual de gatos", segmento: "gatos", estado: "programada", fecha: "2026-10-20", hora: "10:00", destinatarios: 6,
+    mensaje: "Hola {{nombre}}, los gatos también necesitan su chequeo anual. ¿Agendamos a {{mascota}} con el Dr. Méndez?",
+    botones: ["Agendar cita", "Ahora no", "No recibir más"],
+  },
 ];

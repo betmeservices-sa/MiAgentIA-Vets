@@ -11,13 +11,14 @@ import {
   HeartPulse,
   Inbox,
   LogOut,
+  Megaphone,
   Menu,
   PawPrint,
   Stethoscope,
   UserRoundSearch,
   Users,
   X,
-  Zap,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -33,11 +34,12 @@ interface NavItem {
   Icon: LucideIcon;
 }
 
-// Menú lateral: bandeja, acciones (agrupadas), pacientes y dashboard. Calendarios y
+// Menú lateral: bandeja, marketing (agrupado), pacientes y dashboard. Calendarios y
 // recordatorios viven en la barra de arriba.
-const ACCIONES: NavItem[] = [
-  { href: "/seguimiento", label: "Seguimiento", Icon: Stethoscope },
+const MARKETING: NavItem[] = [
   { href: "/reactivacion", label: "Reactivación", Icon: UserRoundSearch },
+  { href: "/seguimiento", label: "Seguimiento", Icon: Stethoscope },
+  { href: "/publicaciones", label: "Publicaciones", Icon: Send },
 ];
 
 const CALENDARIOS: { id: Agenda; label: string }[] = [
@@ -217,8 +219,8 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const { conversaciones } = useStore();
   const transferidas = conversaciones.filter((c) => c.estado === "transferida").length;
-  const enAcciones = ACCIONES.some((a) => activo(pathname, a.href));
-  const [accionesAbierto, setAccionesAbierto] = useState(true);
+  const enMarketing = MARKETING.some((a) => activo(pathname, a.href));
+  const [marketingAbierto, setMarketingAbierto] = useState(true);
 
   return (
     <aside
@@ -257,24 +259,24 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
 
         <button
           type="button"
-          onClick={() => setAccionesAbierto((a) => !a)}
-          aria-expanded={accionesAbierto}
+          onClick={() => setMarketingAbierto((a) => !a)}
+          aria-expanded={marketingAbierto}
           className={cn(
             "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
-            enAcciones && !accionesAbierto
+            enMarketing && !marketingAbierto
               ? "bg-brand text-white shadow-sm shadow-brand/25"
-              : enAcciones
+              : enMarketing
                 ? "text-[var(--text)] hover:bg-surface"
                 : "text-[var(--text-2)] hover:bg-surface hover:text-[var(--text)]",
           )}
         >
-          <Zap size={18} strokeWidth={2.1} />
-          <span className="min-w-0 flex-1 truncate text-left">Acciones</span>
-          <ChevronDown size={16} className={cn("transition", accionesAbierto && "rotate-180")} />
+          <Megaphone size={18} strokeWidth={2.1} />
+          <span className="min-w-0 flex-1 truncate text-left">Marketing</span>
+          <ChevronDown size={16} className={cn("transition", marketingAbierto && "rotate-180")} />
         </button>
-        {accionesAbierto && (
+        {marketingAbierto && (
           <div className="ml-5 space-y-1 border-l border-line pl-2">
-            {ACCIONES.map((a) => (
+            {MARKETING.map((a) => (
               <NavLink key={a.href} {...a} activo={activo(pathname, a.href)} onClick={onClose} compacto />
             ))}
           </div>
