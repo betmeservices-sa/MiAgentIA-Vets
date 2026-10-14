@@ -1,32 +1,49 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, BellRing, Bot, CalendarCheck, CalendarPlus, Check, CheckCheck, ChevronDown, Eye, EyeOff, Info, Moon, PawPrint, Phone, Pill, RotateCcw, Send, ShieldCheck, Sparkles, Stethoscope, UserRound, UserRoundSearch } from "lucide-react";
+import { AlertTriangle, BellRing, Bot, CalendarCheck, CalendarPlus, CheckCheck, Info, Moon, PawPrint, Phone, Pill, RotateCcw, Send, ShieldCheck, Sparkles, Stethoscope, UserRound, UserRoundSearch } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { AGENDA_INFO, etiquetaDia, MOTIVO } from "@/lib/format";
 import { CITAS, cliente, STAFF } from "@/lib/seed";
 import { pasaFiltro, useStore } from "@/lib/store";
-import type { Canal, Conversacion, EstadoConv, Objetivo } from "@/lib/types";
+import type { Canal, Conversacion, Objetivo } from "@/lib/types";
 import { AgendaPill, Avatar, ChannelBadge, EstadoCitaPill, FiltroAgendaToggle } from "@/components/ui";
 
-// La bandeja no reparte clientes entre personas: el agente atiende todo y su
-// trabajo es agendar y reactivar. Las pestañas son por objetivo, más una para
-// lo que el agente pasó a la clínica.
-type Tab = "todas" | "agendar" | "reactivacion" | "recordatorio" | "atencion";
+// La bandeja no reparte clientes entre personas: Luna atiende todo, agenda y
+// reagenda sola. Las pestañas separan la reactivación y lo urgente que Luna
+// pasó a la clínica; los filtros son por canal y por prioridad.
+type Tab = "todas" | "reactivacion" | "urgencia";
 const TABS: { id: Tab; label: string }[] = [
   { id: "todas", label: "Todas" },
-  { id: "agendar", label: "Agendamiento" },
   { id: "reactivacion", label: "Reactivación" },
-  { id: "recordatorio", label: "Seguimiento y recetas" },
-  { id: "atencion", label: "Requieren atención" },
+  { id: "urgencia", label: "Urgencia" },
 ];
 
 function enTab(c: Conversacion, tab: Tab) {
   if (tab === "todas") return true;
-  if (tab === "atencion") return c.estado === "transferida";
-  if (tab === "recordatorio") return c.objetivo === "recordatorio" || c.objetivo === "seguimiento" || c.objetivo === "receta";
+  if (tab === "urgencia") return c.estado === "transferida";
   return c.objetivo === tab;
 }
+
+type Prioridad = "alta" | "media" | "baja";
+
+/**
+ * Alta: urgencias y casos clínicos sin cerrar. Media: Luna la pasó a la clínica
+ * por otro motivo (precio especial, pidió hablar con alguien) o la clínica la
+ * está atendiendo. Baja: Luna la resuelve sola.
+ */
+function prioridad(c: Conversacion): Prioridad {
+  if (c.estado === "resuelta") return "baja";
+  if (c.motivo === "urgencia" || c.motivo === "caso_clinico") return "alta";
+  if (c.estado === "transferida" || c.estado === "secretaria") return "media";
+  return "baja";
+}
+
+const PRIORIDAD: Record<Prioridad, { label: string; punto: string; className: string }> = {
+  alta: { label: "Alta", punto: "bg-rose-500", className: "bg-rose-50 text-rose-700" },
+  media: { label: "Media", punto: "bg-amber-500", className: "bg-amber-50 text-amber-700" },
+  baja: { label: "Baja", punto: "bg-emerald-500", className: "bg-emerald-50 text-emerald-700" },
+};
 
 const OBJETIVO: Record<Objetivo, { label: string; Icon: typeof Bot }> = {
   agendar: { label: "Agendar", Icon: CalendarPlus },
@@ -44,71 +61,139 @@ const RESULTADO = {
   sin_interes: "bg-slate-100 text-slate-600 ring-slate-300/60",
 } as const;
 
-const CANALES: Canal[] = ["whatsapp", "instagram", "facebook"];
+const CANALES: { id: "todos" | Canal; label: string }[] = [
+  { id: "todos", label: "Todos" },
+  { id: "whatsapp", label: "WhatsApp" },
+  { id: "instagram", label: "Instagram" },
+  { id: "facebook", label: "Facebook" },
+];
 
 export default function BandejaPage() {
   const { conversaciones, filtro, marcarLeida, convSel: sel, setConvSel: setSel } = useStore();
   const [tab, setTab] = useState<Tab>("todas");
-  const [canales, setCanales] = useState<Canal[]>(CANALES);
+  const [canal, setCanal] = useState<"todos" | Canal>("todos");
+  const [prio, setPrio] = useState<"todas" | Prioridad>("todas");
 
-  // Siempre queda al menos un canal marcado: con cero la bandeja se vería vacía sin razón.
-  const alternarCanal = (c: Canal) =>
-    setCanales((cs) => (cs.includes(c) ? (cs.length > 1 ? cs.filter((x) => x !== c) : cs) : [...cs, c]));
-
-  // Conversaciones de la agenda filtrada, de los 3 canales (para el conteo del filtro).
+  // Cada filtro cuenta con los demás aplicados, para que los números cuadren.
   const enAgenda = useMemo(() => conversaciones.filter((c) => pasaFiltro(filtro, c.agenda) || c.agenda === null), [conversaciones, filtro]);
-  const visibles = useMemo(() => enAgenda.filter((c) => canales.includes(c.canal)), [enAgenda, canales]);
+  const pasaCanal = (c: Conversacion, k = canal) => k === "todos" || c.canal === k;
+  const pasaPrio = (c: Conversacion, p = prio) => p === "todas" || prioridad(c) === p;
 
   const lista = useMemo(() => {
-    const orden: Record<EstadoConv, number> = { transferida: 0, ia: 1, secretaria: 2, resuelta: 3 };
-    return visibles.filter((c) => enTab(c, tab)).sort((a, b) => orden[a.estado] - orden[b.estado]);
-  }, [visibles, tab]);
+    const orden: Record<Prioridad, number> = { alta: 0, media: 1, baja: 2 };
+    const urgenciaPrimero = (c: Conversacion) => (c.motivo === "urgencia" && c.estado === "transferida" ? -1 : 0);
+    return enAgenda
+      .filter((c) => enTab(c, tab) && pasaCanal(c) && pasaPrio(c))
+      .sort((a, b) => urgenciaPrimero(a) - urgenciaPrimero(b) || orden[prioridad(a)] - orden[prioridad(b)] || Number(a.estado === "resuelta") - Number(b.estado === "resuelta"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enAgenda, tab, canal, prio]);
 
-  const actual = conversaciones.find((c) => c.id === sel) ?? lista[0];
-  const transferidas = conversaciones.filter((c) => c.estado === "transferida");
+  // Si los filtros dejan fuera la conversación abierta, se muestra la primera de la lista.
+  const actual = lista.find((c) => c.id === sel) ?? lista[0];
+  const urgentes = conversaciones.filter((c) => c.estado === "transferida");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-card px-5 py-3">
         <div>
           <h1 className="text-[20px] font-extrabold tracking-tight">Bandeja omnicanal</h1>
-          <p className="text-[12.5px] text-[var(--text-3)]">WhatsApp, Instagram y Facebook en un solo lugar · Luna agenda y reactiva clientes de clínica y grooming</p>
+          <p className="text-[12.5px] text-[var(--text-3)]">WhatsApp, Instagram y Facebook en un solo lugar · Luna agenda y reagenda sola en clínica y grooming</p>
         </div>
         <FiltroAgendaToggle />
       </header>
 
-      {transferidas.length > 0 && (
-        <div className="flex items-center gap-2 border-b border-rose-200 bg-rose-50 px-5 py-2 text-[13px] text-rose-800">
+      {urgentes.length > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            setTab("urgencia");
+            setPrio("todas");
+          }}
+          className="flex items-center gap-2 border-b border-rose-200 bg-rose-50 px-5 py-2 text-left text-[13px] text-rose-800 hover:bg-rose-100"
+        >
           <AlertTriangle size={15} />
-          <span className="font-semibold">{transferidas.length} conversaciones esperan a la secretaria.</span>
-          <span className="hidden sm:inline">Las urgencias van primero.</span>
-        </div>
+          <span className="font-semibold">{urgentes.length} conversaciones esperan a la clínica.</span>
+          <span className="hidden sm:inline">Ver urgencias →</span>
+        </button>
       )}
 
       <div className="flex min-h-0 flex-1">
         {/* Lista */}
         <div className="flex w-full max-w-[360px] shrink-0 flex-col border-r border-line bg-card">
-          <div className="space-y-2 border-b border-line p-3">
-            <div className="flex gap-1 overflow-x-auto">
+          <div className="space-y-2.5 border-b border-line p-3">
+            <div className="flex gap-1">
               {TABS.map((t) => {
-                const n = t.id === "todas" ? null : visibles.filter((c) => enTab(c, t.id)).length;
+                const n = t.id === "todas" ? null : enAgenda.filter((c) => enTab(c, t.id) && pasaCanal(c) && pasaPrio(c)).length;
+                const urg = t.id === "urgencia";
                 return (
                   <button
                     key={t.id}
                     type="button"
                     onClick={() => setTab(t.id)}
                     className={cn(
-                      "shrink-0 rounded-lg px-2.5 py-1 text-[12px] font-semibold",
-                      tab === t.id ? "bg-brand text-white" : "text-[var(--text-2)] hover:bg-surface",
+                      "flex-1 rounded-lg px-2 py-1.5 text-[12.5px] font-semibold",
+                      tab === t.id ? (urg ? "bg-rose-600 text-white" : "bg-brand text-white") : urg ? "text-rose-700 hover:bg-rose-50" : "text-[var(--text-2)] hover:bg-surface",
                     )}
                   >
+                    {urg && <AlertTriangle size={12} className="-mt-0.5 mr-1 inline" />}
                     {t.label}
                     {n !== null && n > 0 && <span className="ml-1 opacity-70">{n}</span>}
                   </button>
                 );
               })}
             </div>
-            <CanalesDropdown canales={canales} alternar={alternarCanal} setCanales={setCanales} conteo={(c) => enAgenda.filter((x) => x.canal === c).length} />
+
+            <div>
+              <p className="mb-1 text-[10.5px] font-bold uppercase tracking-wider text-[var(--text-3)]">Canal</p>
+              <div className="grid grid-cols-4 gap-1">
+                {CANALES.map((k) => {
+                  const on = canal === k.id;
+                  const n = enAgenda.filter((c) => enTab(c, tab) && pasaCanal(c, k.id) && pasaPrio(c)).length;
+                  return (
+                    <button
+                      key={k.id}
+                      type="button"
+                      onClick={() => setCanal(k.id)}
+                      aria-pressed={on}
+                      title={`${k.label} · ${n}`}
+                      className={cn(
+                        "flex items-center justify-center gap-1 rounded-lg border px-1 py-1.5 text-[11.5px] font-semibold transition",
+                        on ? "border-brand bg-brand/10 text-brand" : "border-line text-[var(--text-2)] hover:bg-surface",
+                      )}
+                    >
+                      {k.id === "todos" ? "Todos" : <ChannelBadge canal={k.id} />}
+                      <span className="opacity-60">{n}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-1 text-[10.5px] font-bold uppercase tracking-wider text-[var(--text-3)]">Prioridad</p>
+              <div className="grid grid-cols-4 gap-1">
+                {(["todas", "alta", "media", "baja"] as const).map((p) => {
+                  const on = prio === p;
+                  const n = enAgenda.filter((c) => enTab(c, tab) && pasaCanal(c) && pasaPrio(c, p)).length;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPrio(p)}
+                      aria-pressed={on}
+                      className={cn(
+                        "flex items-center justify-center gap-1 rounded-lg border px-1 py-1.5 text-[11.5px] font-semibold transition",
+                        on ? "border-brand bg-brand/10 text-brand" : "border-line text-[var(--text-2)] hover:bg-surface",
+                      )}
+                    >
+                      {p !== "todas" && <span className={cn("h-2 w-2 rounded-full", PRIORIDAD[p].punto)} />}
+                      {p === "todas" ? "Todas" : PRIORIDAD[p].label}
+                      <span className="opacity-60">{n}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {lista.map((c) => (
@@ -146,6 +231,10 @@ function Item({ c, activa, onClick }: { c: Conversacion; activa: boolean; onClic
           {c.noLeidos > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-accent)] px-1.5 text-[11px] font-bold text-white">{c.noLeidos}</span>}
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] font-bold", PRIORIDAD[prioridad(c)].className)}>
+            <span className={cn("h-1.5 w-1.5 rounded-full", PRIORIDAD[prioridad(c)].punto)} />
+            {PRIORIDAD[prioridad(c)].label}
+          </span>
           {c.agenda && <AgendaPill agenda={c.agenda} />}
           <ObjetivoTag c={c} />
           {c.estado === "transferida" && c.motivo ? (
@@ -369,88 +458,3 @@ function Ficha({ c }: { c: Conversacion }) {
     </aside>
   );
 }
-
-// Filtro de canales en dropdown: muestra u oculta las conversaciones de cada canal.
-function CanalesDropdown({
-  canales,
-  alternar,
-  setCanales,
-  conteo,
-}: {
-  canales: Canal[];
-  alternar: (c: Canal) => void;
-  setCanales: (cs: Canal[]) => void;
-  conteo: (c: Canal) => number;
-}) {
-  const [abierto, setAbierto] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!abierto) return;
-    const fuera = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(false);
-    };
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && setAbierto(false);
-    document.addEventListener("mousedown", fuera);
-    document.addEventListener("keydown", esc);
-    return () => {
-      document.removeEventListener("mousedown", fuera);
-      document.removeEventListener("keydown", esc);
-    };
-  }, [abierto]);
-
-  const todos = canales.length === CANALES.length;
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setAbierto((a) => !a)}
-        aria-expanded={abierto}
-        className={cn("flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-[12.5px] font-semibold", todos ? "border-line" : "border-brand/50 bg-brand/5")}
-      >
-        <span className="flex items-center gap-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-3)]">Canales</span>
-          {todos ? <span>Todos</span> : canales.map((c) => <ChannelBadge key={c} canal={c} />)}
-        </span>
-        <ChevronDown size={14} className={cn("text-[var(--text-3)] transition", abierto && "rotate-180")} />
-      </button>
-      {abierto && (
-        <div className="absolute left-0 right-0 z-20 mt-1 rounded-xl border border-line bg-card p-1.5 shadow-lg">
-          {CANALES.map((c) => {
-            const on = canales.includes(c);
-            const ultimo = on && canales.length === 1;
-            return (
-              <button
-                key={c}
-                type="button"
-                role="menuitemcheckbox"
-                aria-checked={on}
-                onClick={() => alternar(c)}
-                disabled={ultimo}
-                title={ultimo ? "Debe quedar al menos un canal visible" : undefined}
-                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-surface disabled:cursor-not-allowed"
-              >
-                <span className={cn("flex h-4 w-4 items-center justify-center rounded border", on ? "border-brand bg-brand text-white" : "border-[var(--border-2)]")}>
-                  {on && <Check size={11} strokeWidth={3} />}
-                </span>
-                <ChannelBadge canal={c} label />
-                <span className="ml-auto text-[11.5px] text-[var(--text-3)]">{conteo(c)}</span>
-                {on ? <Eye size={13} className="text-[var(--text-3)]" /> : <EyeOff size={13} className="text-[var(--text-3)]" />}
-              </button>
-            );
-          })}
-          <div className="mt-1 flex justify-between border-t border-line px-2 pt-1.5">
-            <button type="button" onClick={() => setCanales(CANALES)} className="text-[11.5px] font-semibold text-brand">
-              Mostrar todos
-            </button>
-            <button type="button" onClick={() => setAbierto(false)} className="text-[11.5px] font-semibold text-[var(--text-2)]">
-              Listo
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
