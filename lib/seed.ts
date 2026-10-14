@@ -16,15 +16,15 @@ import type {
 } from "./types";
 import { fechaDe, iso, isoDeTexto } from "./format";
 
-// Datos de demo de una clínica veterinaria ficticia en Guatemala. Todo lo que
+// Datos de demo de una clínica veterinaria ficticia en El Salvador. Todo lo que
 // el agente "sabe" sale de CONOCIMIENTO: es la información aprobada por la
 // clínica y nada más.
 
 export const CLINICA = {
   nombre: "Clínica Veterinaria Patitas",
   corto: "Patitas",
-  ciudad: "Ciudad de Guatemala",
-  agente: "Luna",
+  ciudad: "San Salvador",
+  agente: "MIA",
 };
 
 export const STAFF = {
@@ -36,12 +36,12 @@ export const STAFF = {
 export const CALENDARIOS = {
   clinica: {
     nombre: "Agenda Clínica · Dr. Méndez",
-    cuenta: "dr.mendez@patitasvet.gt",
+    cuenta: "dr.mendez@patitasvet.com.sv",
     horario: "Lun a Vie 8:00–18:00 · Sáb 8:00–13:00",
   },
   grooming: {
     nombre: "Agenda Grooming · Luis",
-    cuenta: "grooming@patitasvet.gt",
+    cuenta: "grooming@patitasvet.com.sv",
     horario: "Lun a Sáb 8:00–16:00",
   },
 } as const;
@@ -71,26 +71,26 @@ export const CONOCIMIENTO = {
 };
 
 export const CLIENTES: Cliente[] = [
-  { id: "c1", nombre: "María José Pérez", telefono: "+502 5512 3344", correo: "mariajose.perez@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Max", especie: "Perro", raza: "Labrador", edad: "3 años", tamano: "Grande", contactos: [{ nombre: "Jorge Pérez", telefono: "+502 5598 1200", relacion: "Esposo de María José", creadoPorIA: true, desde: "Hoy" }, { nombre: "Valentina Pérez", telefono: "+502 4120 5566", relacion: "Hija de María José", creadoPorIA: true, desde: "Hoy" }] }], ultimaClinica: "12 ago 2026", ultimaGrooming: "20 sep 2026", etiquetas: ["Cliente frecuente"] },
-  { id: "c2", nombre: "Jorge Castillo", telefono: "+502 4421 9087", correo: "jorge.castillo@hotmail.com", canal: "instagram", mascotas: [{ nombre: "Toby", especie: "Perro", raza: "Schnauzer", edad: "5 años", tamano: "Mediano" }, { nombre: "Bimba", especie: "Perro", raza: "Cocker spaniel", edad: "2 años", tamano: "Mediano", creadaPorIA: true }], ultimaGrooming: "15 jul 2026" },
-  { id: "c3", nombre: "Ana Lucía Morales", telefono: "+502 3098 7765", correo: "analucia.morales@yahoo.com", canal: "whatsapp", mascotas: [{ nombre: "Coco", especie: "Perro", raza: "Beagle", edad: "2 años", tamano: "Mediano" }], ultimaClinica: "3 sep 2026" },
-  { id: "c4", nombre: "Roberto Gálvez", telefono: "+502 5590 1123", correo: "roberto.galvez@outlook.com", canal: "facebook", mascotas: [{ nombre: "Rocky", especie: "Perro", raza: "Pastor alemán", edad: "4 años", tamano: "Grande", contactos: [{ nombre: "Ana de Gálvez", telefono: "+502 5590 7781", relacion: "Esposa de Roberto", desde: "2 ago 2026" }] }, { nombre: "Luna", especie: "Perro", raza: "Pastor alemán", edad: "4 años", tamano: "Grande", contactos: [{ nombre: "Ana de Gálvez", telefono: "+502 5590 7781", relacion: "Esposa de Roberto", desde: "2 ago 2026" }] }, { nombre: "Thor", especie: "Perro", raza: "Husky", edad: "2 años", tamano: "Grande" }], ultimaGrooming: "2 ago 2026" },
-  { id: "c5", nombre: "Sofía Herrera", telefono: "+502 4789 2210", correo: "sofia.herrera@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Mishi", especie: "Gato", raza: "Siamés", edad: "6 años" }], ultimaClinica: "18 sep 2026" },
-  { id: "c6", nombre: "Daniel Ortiz", telefono: "+502 5023 4471", correo: "daniel.ortiz@hotmail.com", canal: "whatsapp", mascotas: [{ nombre: "Bruno", especie: "Perro", raza: "Bulldog francés", edad: "3 años", tamano: "Pequeño" }], ultimaClinica: "3 oct 2026" },
-  { id: "c7", nombre: "Gabriela Rivas", telefono: "+502 3345 8890", correo: "gabriela.rivas@yahoo.com", canal: "whatsapp", mascotas: [{ nombre: "Lola", especie: "Perro", raza: "Poodle", edad: "7 años", tamano: "Pequeño" }], ultimaGrooming: "28 may 2026" },
-  { id: "c8", nombre: "Luis Fernando Ac", telefono: "+502 4612 7789", correo: "luisfernando.ac@outlook.com", canal: "instagram", mascotas: [{ nombre: "Simba", especie: "Gato", raza: "Doméstico", edad: "1 año" }] },
-  { id: "c9", nombre: "Carmen Estrada", telefono: "+502 5534 0012", correo: "carmen.estrada@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Canela", especie: "Perro", raza: "Chihuahua", edad: "9 años", tamano: "Pequeño" }], ultimaClinica: "10 jun 2026" },
-  { id: "c10", nombre: "Pedro Juárez", telefono: "+502 4098 5521", correo: "pedro.juarez@hotmail.com", canal: "facebook", mascotas: [{ nombre: "Kira", especie: "Perro", raza: "Golden retriever", edad: "8 años", tamano: "Grande" }], ultimaClinica: "22 sep 2026" },
-  { id: "c11", nombre: "Valeria Monzón", telefono: "+502 3321 6654", correo: "valeria.monzon@yahoo.com", canal: "whatsapp", mascotas: [{ nombre: "Peluche", especie: "Perro", raza: "Shih tzu", edad: "4 años", tamano: "Pequeño" }], ultimaGrooming: "9 sep 2026" },
-  { id: "c12", nombre: "Héctor Pineda", telefono: "+502 5876 4432", correo: "hector.pineda@outlook.com", canal: "whatsapp", mascotas: [{ nombre: "Nala", especie: "Gato", raza: "Persa", edad: "5 años" }], ultimaClinica: "14 feb 2026", optOutMarketing: false },
-  { id: "c13", nombre: "Lucía Barrios", telefono: "+502 4455 1290", correo: "lucia.barrios@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Firulais", especie: "Perro", raza: "Mestizo", edad: "6 años", tamano: "Mediano" }], ultimaClinica: "1 mar 2026" },
-  { id: "c14", nombre: "Andrés Cifuentes", telefono: "+502 3011 7766", correo: "andres.cifuentes@hotmail.com", canal: "whatsapp", mascotas: [{ nombre: "Oreo", especie: "Gato", raza: "Doméstico", edad: "3 años" }], ultimaClinica: "20 sep 2026" },
-  { id: "c15", nombre: "Paola Sandoval", telefono: "+502 5210 3398", correo: "paola.sandoval@yahoo.com", canal: "instagram", mascotas: [{ nombre: "Chispa", especie: "Perro", raza: "Yorkshire", edad: "2 años", tamano: "Pequeño" }], ultimaGrooming: "1 abr 2026" },
-  { id: "c16", nombre: "Miguel Ángel Reyes", telefono: "+502 4987 6610", correo: "miguelangel.reyes@outlook.com", canal: "whatsapp", mascotas: [{ nombre: "Duke", especie: "Perro", raza: "Rottweiler", edad: "5 años", tamano: "Grande" }], ultimaClinica: "5 ene 2026" },
-  { id: "c17", nombre: "Fernanda Coronado", telefono: "+502 3678 2201", correo: "fernanda.coronado@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Pelusa", especie: "Gato", raza: "Angora", edad: "4 años" }], ultimaGrooming: "10 mar 2026" },
-  { id: "c18", nombre: "José Luis Recinos", telefono: "+502 5543 8812", correo: "joseluis.recinos@hotmail.com", canal: "facebook", mascotas: [{ nombre: "Rex", especie: "Perro", raza: "Boxer", edad: "6 años", tamano: "Grande" }], ultimaClinica: "30 abr 2026" },
-  { id: "c19", nombre: "Diana Velásquez", telefono: "+502 5678 1122", correo: "diana.velasquez@yahoo.com", canal: "whatsapp", creadoPorIA: true, mascotas: [{ nombre: "Rocco", especie: "Perro", raza: "Golden retriever", edad: "10 meses", tamano: "Grande", creadaPorIA: true }] },
-  { id: "c20", nombre: "Kevin Ajú", telefono: "+502 3190 4456", correo: "kevin.aju@outlook.com", canal: "whatsapp", creadoPorIA: true, mascotas: [{ nombre: "Michi", especie: "Gato", raza: "Doméstico", edad: "4 meses", creadaPorIA: true }] },
+  { id: "c1", nombre: "María José Pérez", telefono: "+503 7512 3344", correo: "mariajose.perez@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Max", especie: "Perro", raza: "Labrador", edad: "3 años", tamano: "Grande", contactos: [{ nombre: "Jorge Pérez", telefono: "+503 7598 1200", relacion: "Esposo de María José", creadoPorIA: true, desde: "Hoy" }, { nombre: "Valentina Pérez", telefono: "+503 7120 5566", relacion: "Hija de María José", creadoPorIA: true, desde: "Hoy" }] }], ultimaClinica: "12 ago 2026", ultimaGrooming: "20 sep 2026", etiquetas: ["Cliente frecuente"] },
+  { id: "c2", nombre: "Jorge Castillo", telefono: "+503 7421 9087", correo: "jorge.castillo@hotmail.com", canal: "instagram", mascotas: [{ nombre: "Toby", especie: "Perro", raza: "Schnauzer", edad: "5 años", tamano: "Mediano" }, { nombre: "Bimba", especie: "Perro", raza: "Cocker spaniel", edad: "2 años", tamano: "Mediano", creadaPorIA: true }], ultimaGrooming: "15 jul 2026" },
+  { id: "c3", nombre: "Ana Lucía Morales", telefono: "+503 6098 7765", correo: "analucia.morales@yahoo.com", canal: "whatsapp", mascotas: [{ nombre: "Coco", especie: "Perro", raza: "Beagle", edad: "2 años", tamano: "Mediano" }], ultimaClinica: "3 sep 2026" },
+  { id: "c4", nombre: "Roberto Gálvez", telefono: "+503 7590 1123", correo: "roberto.galvez@outlook.com", canal: "facebook", mascotas: [{ nombre: "Rocky", especie: "Perro", raza: "Pastor alemán", edad: "4 años", tamano: "Grande", contactos: [{ nombre: "Ana de Gálvez", telefono: "+503 7590 7781", relacion: "Esposa de Roberto", desde: "2 ago 2026" }] }, { nombre: "Luna", especie: "Perro", raza: "Pastor alemán", edad: "4 años", tamano: "Grande", contactos: [{ nombre: "Ana de Gálvez", telefono: "+503 7590 7781", relacion: "Esposa de Roberto", desde: "2 ago 2026" }] }, { nombre: "Thor", especie: "Perro", raza: "Husky", edad: "2 años", tamano: "Grande" }], ultimaGrooming: "2 ago 2026" },
+  { id: "c5", nombre: "Sofía Herrera", telefono: "+503 7789 2210", correo: "sofia.herrera@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Mishi", especie: "Gato", raza: "Siamés", edad: "6 años" }], ultimaClinica: "18 sep 2026" },
+  { id: "c6", nombre: "Daniel Ortiz", telefono: "+503 7023 4471", correo: "daniel.ortiz@hotmail.com", canal: "whatsapp", mascotas: [{ nombre: "Bruno", especie: "Perro", raza: "Bulldog francés", edad: "3 años", tamano: "Pequeño" }], ultimaClinica: "3 oct 2026" },
+  { id: "c7", nombre: "Gabriela Rivas", telefono: "+503 6345 8890", correo: "gabriela.rivas@yahoo.com", canal: "whatsapp", mascotas: [{ nombre: "Lola", especie: "Perro", raza: "Poodle", edad: "7 años", tamano: "Pequeño" }], ultimaGrooming: "28 may 2026" },
+  { id: "c8", nombre: "Luis Fernando Argueta", telefono: "+503 7612 7789", correo: "luisfernando.argueta@outlook.com", canal: "instagram", mascotas: [{ nombre: "Simba", especie: "Gato", raza: "Doméstico", edad: "1 año" }] },
+  { id: "c9", nombre: "Carmen Estrada", telefono: "+503 7534 0012", correo: "carmen.estrada@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Canela", especie: "Perro", raza: "Chihuahua", edad: "9 años", tamano: "Pequeño" }], ultimaClinica: "10 jun 2026" },
+  { id: "c10", nombre: "Pedro Juárez", telefono: "+503 7098 5521", correo: "pedro.juarez@hotmail.com", canal: "facebook", mascotas: [{ nombre: "Kira", especie: "Perro", raza: "Golden retriever", edad: "8 años", tamano: "Grande" }], ultimaClinica: "22 sep 2026" },
+  { id: "c11", nombre: "Valeria Monzón", telefono: "+503 6321 6654", correo: "valeria.monzon@yahoo.com", canal: "whatsapp", mascotas: [{ nombre: "Peluche", especie: "Perro", raza: "Shih tzu", edad: "4 años", tamano: "Pequeño" }], ultimaGrooming: "9 sep 2026" },
+  { id: "c12", nombre: "Héctor Pineda", telefono: "+503 7876 4432", correo: "hector.pineda@outlook.com", canal: "whatsapp", mascotas: [{ nombre: "Nala", especie: "Gato", raza: "Persa", edad: "5 años" }], ultimaClinica: "14 feb 2026", optOutMarketing: false },
+  { id: "c13", nombre: "Lucía Barrios", telefono: "+503 7455 1290", correo: "lucia.barrios@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Firulais", especie: "Perro", raza: "Mestizo", edad: "6 años", tamano: "Mediano" }], ultimaClinica: "1 mar 2026" },
+  { id: "c14", nombre: "Andrés Cifuentes", telefono: "+503 6011 7766", correo: "andres.cifuentes@hotmail.com", canal: "whatsapp", mascotas: [{ nombre: "Oreo", especie: "Gato", raza: "Doméstico", edad: "3 años" }], ultimaClinica: "20 sep 2026" },
+  { id: "c15", nombre: "Paola Sandoval", telefono: "+503 7210 3398", correo: "paola.sandoval@yahoo.com", canal: "instagram", mascotas: [{ nombre: "Chispa", especie: "Perro", raza: "Yorkshire", edad: "2 años", tamano: "Pequeño" }], ultimaGrooming: "1 abr 2026" },
+  { id: "c16", nombre: "Miguel Ángel Reyes", telefono: "+503 7987 6610", correo: "miguelangel.reyes@outlook.com", canal: "whatsapp", mascotas: [{ nombre: "Duke", especie: "Perro", raza: "Rottweiler", edad: "5 años", tamano: "Grande" }], ultimaClinica: "5 ene 2026" },
+  { id: "c17", nombre: "Fernanda Coronado", telefono: "+503 6678 2201", correo: "fernanda.coronado@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Pelusa", especie: "Gato", raza: "Angora", edad: "4 años" }], ultimaGrooming: "10 mar 2026" },
+  { id: "c18", nombre: "José Luis Recinos", telefono: "+503 7543 8812", correo: "joseluis.recinos@hotmail.com", canal: "facebook", mascotas: [{ nombre: "Rex", especie: "Perro", raza: "Boxer", edad: "6 años", tamano: "Grande" }], ultimaClinica: "30 abr 2026" },
+  { id: "c19", nombre: "Diana Velásquez", telefono: "+503 7678 1122", correo: "diana.velasquez@yahoo.com", canal: "whatsapp", creadoPorIA: true, mascotas: [{ nombre: "Rocco", especie: "Perro", raza: "Golden retriever", edad: "10 meses", tamano: "Grande", creadaPorIA: true }] },
+  { id: "c20", nombre: "Kevin Menjívar", telefono: "+503 6190 4456", correo: "kevin.menjivar@outlook.com", canal: "whatsapp", creadoPorIA: true, mascotas: [{ nombre: "Michi", especie: "Gato", raza: "Doméstico", edad: "4 meses", creadaPorIA: true }] },
 ];
 
 export const CONVERSACIONES: Conversacion[] = [
@@ -134,31 +134,31 @@ export const CONVERSACIONES: Conversacion[] = [
   },
   {
     id: "v31", objetivo: "recordatorio", resultado: { tipo: "confirmada", texto: "Clínica · mañana 11:30" }, clienteId: "c1", canal: "whatsapp", agenda: "clinica", estado: "ia", noLeidos: 0, hora: "10:27",
-    contacto: { nombre: "Valentina Pérez", telefono: "+502 4120 5566", relacion: "Hija de María José", mascota: "Max" },
+    contacto: { nombre: "Valentina Pérez", telefono: "+503 7120 5566", relacion: "Hija de María José", mascota: "Max" },
     mensajes: [
       { id: "m1", autor: "cliente", texto: "Hola! Max Pérez tiene vacuna mañana, mi mamá no puede ir. ¿Lo puedo llevar yo?", hora: "10:22" },
       { id: "m2", autor: "ia", texto: "¡Hola! Sí, Max Pérez tiene su vacuna múltiple mañana a las 11:30. Este número no está en su perfil, así que primero te registro: ¿cuál es tu nombre y tu relación con Max? Y para confirmar que hablamos del mismo Max Pérez: ¿de qué raza es y qué edad tiene?", hora: "10:22" },
       { id: "m3", autor: "cliente", texto: "Valentina, soy la hija de María José. Es labrador, tiene 3 años", hora: "10:24" },
-      { id: "m4", autor: "sistema", texto: "Contacto secundario creado por Luna · Valentina Pérez (+502 4120 5566) · Hija de María José · agregado al perfil de Max Pérez (2.º contacto). Raza y edad verificadas. Queda para revisión de recepción.", hora: "10:24" },
+      { id: "m4", autor: "sistema", texto: "Contacto secundario creado por MIA · Valentina Pérez (+503 7120 5566) · Hija de María José · agregado al perfil de Max Pérez (2.º contacto). Raza y edad verificadas. Queda para revisión de recepción.", hora: "10:24" },
       { id: "m5", autor: "ia", texto: "¡Gracias, Valentina! Ya quedaste como contacto de Max Pérez. Claro que puedes llevarlo tú: ¿te confirmo la cita de mañana a las 11:30 con el Dr. Méndez?", hora: "10:24", botones: ["Confirmar", "Reagendar"] },
       { id: "m6", autor: "cliente", texto: "Confirmar", hora: "10:26" },
       { id: "m7", autor: "ia", texto: "Listo ✅ Cita confirmada: Max Pérez, vacuna múltiple, mañana a las 11:30. Lleva su carné de vacunas, por favor. Le aviso a María José que tú lo llevas.", hora: "10:26" },
-      { id: "m8", autor: "sistema", texto: "Cita confirmada en Agenda Clínica (Google Calendar · dr.mendez@patitasvet.gt).", hora: "10:26" },
+      { id: "m8", autor: "sistema", texto: "Cita confirmada en Agenda Clínica (Google Calendar · dr.mendez@patitasvet.com.sv).", hora: "10:26" },
       { id: "m9", autor: "cliente", texto: "Mil gracias 🙌", hora: "10:27" },
     ],
   },
   {
     id: "v30", objetivo: "agendar", resultado: { tipo: "cita", texto: "Grooming · pasado mañana 10:00" }, clienteId: "c1", canal: "whatsapp", agenda: "grooming", estado: "ia", noLeidos: 0, hora: "10:14",
-    contacto: { nombre: "Jorge Pérez", telefono: "+502 5598 1200", relacion: "Esposo de María José", mascota: "Max" },
+    contacto: { nombre: "Jorge Pérez", telefono: "+503 7598 1200", relacion: "Esposo de María José", mascota: "Max" },
     mensajes: [
       { id: "m1", autor: "cliente", texto: "Buenas, quiero agendar un baño para Max Pérez", hora: "10:09" },
       { id: "m2", autor: "ia", texto: "¡Hola! Encontré a Max Pérez en nuestra base, pero este número no está registrado en su perfil. ¿Me dices tu nombre y tu relación con Max? Y para confirmar que hablamos del mismo Max Pérez: ¿de qué raza es y qué edad tiene?", hora: "10:09" },
       { id: "m3", autor: "cliente", texto: "Soy Jorge, el esposo de María José. Es labrador y tiene 3 años", hora: "10:11" },
-      { id: "m4", autor: "sistema", texto: "Contacto secundario creado por Luna · Jorge Pérez (+502 5598 1200) · Esposo de María José · agregado al perfil de Max Pérez. Raza y edad verificadas. Queda para revisión de recepción.", hora: "10:11" },
+      { id: "m4", autor: "sistema", texto: "Contacto secundario creado por MIA · Jorge Pérez (+503 7598 1200) · Esposo de María José · agregado al perfil de Max Pérez. Raza y edad verificadas. Queda para revisión de recepción.", hora: "10:11" },
       { id: "m5", autor: "ia", texto: "¡Gracias, Jorge! Ya te agregué como contacto de Max Pérez, así la próxima vez te reconozco directo. Para el baño de Max (grande) tengo espacio pasado mañana a las 10:00 o a las 12:00. ¿Cuál prefieres?", hora: "10:11" },
       { id: "m6", autor: "cliente", texto: "10 está bien", hora: "10:13" },
       { id: "m7", autor: "ia", texto: "Listo ✅ Max Pérez queda agendado para baño pasado mañana a las 10:00 con Luis. Le aviso también a María José por si quiere el recordatorio.", hora: "10:13" },
-      { id: "m8", autor: "sistema", texto: "Cita creada en Agenda Grooming (Google Calendar · grooming@patitasvet.gt).", hora: "10:13" },
+      { id: "m8", autor: "sistema", texto: "Cita creada en Agenda Grooming (Google Calendar · grooming@patitasvet.com.sv).", hora: "10:13" },
       { id: "m9", autor: "cliente", texto: "Perfecto, gracias", hora: "10:14" },
     ],
   },
@@ -169,7 +169,7 @@ export const CONVERSACIONES: Conversacion[] = [
       { id: "m2", autor: "ia", texto: "¡Hola María José! El precio de la vacuna múltiple depende de la vacuna que le corresponda a Max; el Dr. Méndez la confirma en la cita. ¿Quieres que te agende? Tengo espacio mañana a las 9:00 o 11:30.", hora: "10:02" },
       { id: "m3", autor: "cliente", texto: "Mañana 11:30 perfecto", hora: "10:04" },
       { id: "m4", autor: "ia", texto: "Listo ✅ Agendé a Max para vacuna múltiple mañana a las 11:30 con el Dr. Méndez. Te enviaremos un recordatorio un día antes.", hora: "10:04" },
-      { id: "m5", autor: "sistema", texto: "Cita creada en Agenda Clínica (Google Calendar · dr.mendez@patitasvet.gt).", hora: "10:04" },
+      { id: "m5", autor: "sistema", texto: "Cita creada en Agenda Clínica (Google Calendar · dr.mendez@patitasvet.com.sv).", hora: "10:04" },
       { id: "m6", autor: "cliente", texto: "Gracias!!", hora: "10:05" },
     ],
   },
@@ -180,7 +180,7 @@ export const CONVERSACIONES: Conversacion[] = [
       { id: "m2", autor: "ia", texto: "¡Hola Jorge! Para un perro mediano como Toby, el baño y corte toma unas 2 horas. ¿Te gustaría agendarlo? Luis tiene espacio el jueves a las 8:00 o a las 10:30.", hora: "09:47" },
       { id: "m3", autor: "cliente", texto: "Jueves a las 8", hora: "09:50" },
       { id: "m4", autor: "ia", texto: "Listo ✅ Toby queda agendado para baño y corte el jueves a las 8:00 con Luis. Te avisamos por aquí cuando esté listo para recoger.", hora: "09:50" },
-      { id: "m5", autor: "sistema", texto: "Cita creada en Agenda Grooming (Google Calendar · grooming@patitasvet.gt).", hora: "09:50" },
+      { id: "m5", autor: "sistema", texto: "Cita creada en Agenda Grooming (Google Calendar · grooming@patitasvet.com.sv).", hora: "09:50" },
     ],
   },
   {
@@ -293,11 +293,11 @@ export const CONVERSACIONES: Conversacion[] = [
       { id: "m3", autor: "cliente", texto: "Diana Velásquez, se llama Rocco", hora: "10:20" },
       { id: "m4", autor: "ia", texto: "Mucho gusto, Diana. ¿De qué raza es Rocco y qué edad tiene?", hora: "10:20" },
       { id: "m5", autor: "cliente", texto: "Es golden, tiene 10 meses", hora: "10:21" },
-      { id: "m6", autor: "sistema", texto: "Perfil creado por Luna · Cliente: Diana Velásquez (+502 5678 1122) · Mascota: Rocco — Perro · Golden retriever · 10 meses. Queda para revisión de recepción.", hora: "10:21" },
+      { id: "m6", autor: "sistema", texto: "Perfil creado por MIA · Cliente: Diana Velásquez (+503 7678 1122) · Mascota: Rocco — Perro · Golden retriever · 10 meses. Queda para revisión de recepción.", hora: "10:21" },
       { id: "m7", autor: "ia", texto: "¡Listo, ya registré a Rocco! El Dr. Méndez confirma en la cita cuál vacuna le corresponde. Tengo espacio mañana a las 9:00 o a las 16:30.", hora: "10:21" },
       { id: "m8", autor: "cliente", texto: "A las 4:30 porfa", hora: "10:23" },
       { id: "m9", autor: "ia", texto: "Listo ✅ Rocco queda agendado para vacuna múltiple mañana a las 16:30 con el Dr. Méndez. Si tienes su carné de vacunas, tráelo ese día.", hora: "10:24" },
-      { id: "m10", autor: "sistema", texto: "Cita creada en Agenda Clínica (Google Calendar · dr.mendez@patitasvet.gt).", hora: "10:24" },
+      { id: "m10", autor: "sistema", texto: "Cita creada en Agenda Clínica (Google Calendar · dr.mendez@patitasvet.com.sv).", hora: "10:24" },
     ],
   },
   {
@@ -306,7 +306,7 @@ export const CONVERSACIONES: Conversacion[] = [
       { id: "m1", autor: "cliente", texto: "Hola, ahora quiero llevar a mi otra perrita a baño, se llama Bimba", hora: "08:11" },
       { id: "m2", autor: "ia", texto: "¡Hola Jorge! Tengo registrado a Toby, pero Bimba todavía no está en tu perfil. ¿De qué raza es y qué edad tiene?", hora: "08:11" },
       { id: "m3", autor: "cliente", texto: "Cocker, 2 años", hora: "08:13" },
-      { id: "m4", autor: "sistema", texto: "Mascota agregada por Luna al perfil de Jorge Castillo · Bimba — Perro · Cocker spaniel · 2 años · Mediano.", hora: "08:13" },
+      { id: "m4", autor: "sistema", texto: "Mascota agregada por MIA al perfil de Jorge Castillo · Bimba — Perro · Cocker spaniel · 2 años · Mediano.", hora: "08:13" },
       { id: "m5", autor: "ia", texto: "¡Listo, agregué a Bimba a tu perfil! El baño para perro mediano toma cerca de 1.5 horas. Luis tiene espacio el sábado a las 10:00 o a las 12:00.", hora: "08:13" },
       { id: "m6", autor: "cliente", texto: "Sábado 10", hora: "08:15" },
       { id: "m7", autor: "ia", texto: "Listo ✅ Bimba queda agendada para baño el sábado a las 10:00 con Luis.", hora: "08:15" },
@@ -325,10 +325,10 @@ export const CONVERSACIONES: Conversacion[] = [
     mensajes: [
       { id: "m1", autor: "cliente", texto: "Hola, les escribí por Facebook, quiero agendar consulta para mi gatita", hora: "10:41" },
       { id: "m2", autor: "ia", texto: "¡Hola! Qué bueno que nos escribes por aquí. Es la primera vez que nos contactas desde este número, así que voy a crear el perfil de tu mascota: ¿me compartes tu nombre y el de tu gatita?", hora: "10:41" },
-      { id: "m3", autor: "cliente", texto: "Kevin Ajú, se llama Michi", hora: "10:43" },
+      { id: "m3", autor: "cliente", texto: "Kevin Menjívar, se llama Michi", hora: "10:43" },
       { id: "m4", autor: "ia", texto: "Gracias, Kevin. ¿De qué raza es Michi y qué edad tiene? Si no sabes la raza, con «doméstica» está bien.", hora: "10:43" },
       { id: "m5", autor: "cliente", texto: "doméstica, 4 meses", hora: "10:44" },
-      { id: "m6", autor: "sistema", texto: "Perfil creado por Luna · Cliente: Kevin Ajú (+502 3190 4456) · Mascota: Michi — Gato · Doméstico · 4 meses. Queda para revisión de recepción.", hora: "10:44" },
+      { id: "m6", autor: "sistema", texto: "Perfil creado por MIA · Cliente: Kevin Menjívar (+503 6190 4456) · Mascota: Michi — Gato · Doméstico · 4 meses. Queda para revisión de recepción.", hora: "10:44" },
       { id: "m7", autor: "ia", texto: "¡Listo, ya registré a Michi! El Dr. Méndez tiene espacio hoy a las 16:30 o mañana a las 9:00. ¿Cuál prefieres?", hora: "10:44" },
     ],
   },
@@ -735,7 +735,7 @@ export const POSTS: Post[] = [
   {
     id: "p1", redes: ["instagram", "facebook"], estado: "publicada", fecha: "2026-10-10", hora: "18:00",
     diseno: DISENOS[0],
-    texto: "¿Ya revisaste el carné de vacunas de tu mascota? 🐶🐱 Las vacunas al día la protegen de enfermedades graves. Escríbenos por WhatsApp y Luna te agenda en minutos. #Vacunación #ClínicaVeterinaria #Guatemala",
+    texto: "¿Ya revisaste el carné de vacunas de tu mascota? 🐶🐱 Las vacunas al día la protegen de enfermedades graves. Escríbenos por WhatsApp y MIA te agenda en minutos. #Vacunación #ClínicaVeterinaria #ElSalvador",
     stats: { alcance: 2140, meGusta: 186, comentarios: 23, mensajes: 17 },
   },
   {
@@ -747,7 +747,7 @@ export const POSTS: Post[] = [
   {
     id: "p3", redes: ["facebook"], estado: "publicada", fecha: "2026-09-28", hora: "09:00",
     diseno: DISENOS[2],
-    texto: "Ahora puedes agendar tu cita a cualquier hora por WhatsApp: nuestra asistente Luna te responde al instante y te recuerda la cita un día antes. 📲",
+    texto: "Ahora puedes agendar tu cita a cualquier hora por WhatsApp: nuestra asistente MIA te responde al instante y te recuerda la cita un día antes. 📲",
     stats: { alcance: 1520, meGusta: 98, comentarios: 12, mensajes: 31 },
   },
   {
@@ -797,7 +797,7 @@ export const PLANTILLAS_WA: PlantillaWA[] = [
     encabezado: "Recordatorio de cita",
     cuerpo: "Hola {{1}}, te recordamos la cita de {{2}} para {{3}} el {{4}} a las {{5}} en Clínica Veterinaria Patitas. ¿Nos confirmas tu asistencia?",
     ejemplos: ["Sofía", "Mishi", "control post consulta", "miércoles 7 de octubre", "11:00"],
-    pie: "Patitas · Ciudad de Guatemala",
+    pie: "Patitas · San Salvador",
     botones: ["Confirmar", "Reagendar", "Cancelar"],
   },
   {

@@ -66,7 +66,7 @@ interface Estado {
 const Ctx = createContext<Estado | null>(null);
 
 export function ahora() {
-  return new Date().toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return new Date().toLocaleTimeString("es-SV", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 const sistema = (texto: string): Mensaje => ({
@@ -246,7 +246,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           estado: "secretaria",
           noLeidos: 0,
           hora: ahora(),
-          mensajes: [sistema("Conversación abierta desde Pacientes. Luna queda en pausa mientras la clínica escribe.")],
+          mensajes: [sistema("Conversación abierta desde Pacientes. MIA queda en pausa mientras la clínica escribe.")],
         },
         ...cs,
       ]);

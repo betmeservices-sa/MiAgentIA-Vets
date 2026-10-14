@@ -82,7 +82,7 @@ export default function DashboardPage() {
 }
 
 // Resumen de las citas agendadas para hoy: cuáles ya se hicieron y cuáles
-// faltan, por agenda, más lo que Luna agendó hoy en la bandeja.
+// faltan, por agenda, más lo que MIA agendó hoy en la bandeja.
 function CitasDelDia({ agendas }: { agendas: Agenda[] }) {
   const { conversaciones } = useStore();
   const hoy = agendas.flatMap((a) => citasDe(a, 0)).sort((x, y) => x.hora.localeCompare(y.hora));
@@ -98,7 +98,7 @@ function CitasDelDia({ agendas }: { agendas: Agenda[] }) {
       <span className="w-11 shrink-0 text-[13px] font-bold tabular-nums">{c.hora}</span>
       <div className="min-w-0 flex-1 leading-tight">
         <p className="truncate text-[13px] font-semibold">{c.mascota} <span className="font-normal text-[var(--text-3)]">· {cliente(c.clienteId).nombre}</span></p>
-        <p className="truncate text-[11.5px] text-[var(--text-3)]">{c.servicio} · {AGENDA_INFO[c.agenda].recurso}{c.origen === "ia" ? " · agendó Luna" : ""}</p>
+        <p className="truncate text-[11.5px] text-[var(--text-3)]">{c.servicio} · {AGENDA_INFO[c.agenda].recurso}{c.origen === "ia" ? " · agendó MIA" : ""}</p>
       </div>
       <EstadoCitaPill estado={c.estado} />
     </div>
@@ -125,7 +125,7 @@ function CitasDelDia({ agendas }: { agendas: Agenda[] }) {
           );
         })}
         <div className="rounded-xl bg-violet-50 p-3">
-          <p className="flex items-center gap-1 text-[12px] font-bold text-violet-700"><Bot size={13} /> Agendadas hoy por Luna</p>
+          <p className="flex items-center gap-1 text-[12px] font-bold text-violet-700"><Bot size={13} /> Agendadas hoy por MIA</p>
           <p className="mt-1 text-[24px] font-extrabold leading-none">{agendadasHoy.length}</p>
           <p className="mt-1 text-[11.5px] text-[var(--text-2)]">{porReactivacion} por reactivación · {agendadasHoy.length - porReactivacion} por agendamiento</p>
         </div>
@@ -196,7 +196,7 @@ function BandejaCards({ agendas, escala, titulo }: { agendas: Agenda[]; escala: 
           <div className="flex items-center justify-center bg-sky-600 text-[12px] font-bold text-white" style={{ width: `${pct(b.transferidas, total)}%` }}>{pct(b.transferidas, total)}%</div>
         </div>
         <div className="mt-2 flex justify-between text-[12px] text-[var(--text-3)]">
-          <span><Bot size={12} className="inline" /> {b.ia} resueltas por Luna</span>
+          <span><Bot size={12} className="inline" /> {b.ia} resueltas por MIA</span>
           <span>{b.transferidas} a secretaria</span>
         </div>
         <p className="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-3)]">Motivo de transferencia</p>

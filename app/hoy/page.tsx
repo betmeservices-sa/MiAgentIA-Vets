@@ -19,7 +19,7 @@ export default function HoyPage() {
   const transferidas = conversaciones.filter((c) => c.estado === "transferida" && (c.agenda === null || pasaFiltro(filtro, c.agenda)));
   const urgencias = useUrgencias();
   const verUrgencias = agendas.includes("clinica");
-  const fecha = new Date().toLocaleDateString("es-GT", { weekday: "long", day: "numeric", month: "long" });
+  const fecha = new Date().toLocaleDateString("es-SV", { weekday: "long", day: "numeric", month: "long" });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -67,7 +67,7 @@ export default function HoyPage() {
                             <p className="truncate text-[13.5px] font-semibold">
                               {u.mascota} <span className="font-normal text-[var(--text-3)]">· {u.nombre}</span>
                             </p>
-                            <p className="truncate text-[12px] text-rose-700">Urgencia marcada por Luna · esperando que el veterinario le dé hora</p>
+                            <p className="truncate text-[12px] text-rose-700">Urgencia marcada por MIA · esperando que el veterinario le dé hora</p>
                           </div>
                           <span className="inline-flex items-center gap-1 rounded-full bg-rose-600 px-2 py-0.5 text-[11px] font-semibold text-white">
                             <Siren size={11} /> Urgencia
@@ -88,7 +88,7 @@ export default function HoyPage() {
                             <p className="truncate text-[13.5px] font-semibold">
                               {urg.mascota} <span className="font-normal text-[var(--text-3)]">· {urg.nombre}</span>
                             </p>
-                            <p className="truncate text-[12px] text-rose-700">Urgencia · sobrecupo · marcada por Luna</p>
+                            <p className="truncate text-[12px] text-rose-700">Urgencia · sobrecupo · marcada por MIA</p>
                           </div>
                           <span className="inline-flex items-center gap-1 rounded-full bg-rose-600 px-2 py-0.5 text-[11px] font-semibold text-white">
                             <Siren size={11} /> Urgencia
@@ -107,7 +107,7 @@ export default function HoyPage() {
                             {c.mascota} <span className="font-normal text-[var(--text-3)]">· {cli.nombre}</span>
                           </p>
                           <p className="text-[12px] text-[var(--text-3)]">
-                            {c.servicio} · {c.duracionMin} min · {c.origen === "ia" ? "agendó Luna" : "agendó recepción"}
+                            {c.servicio} · {c.duracionMin} min · {c.origen === "ia" ? "agendó MIA" : "agendó recepción"}
                           </p>
                         </div>
                         <EstadoCitaPill estado={c.estado} />

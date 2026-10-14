@@ -39,15 +39,15 @@ export default function RecetaPage() {
   const [enviada, setEnviada] = useState<string | null>(null);
   const hoja = useRef<HTMLDivElement>(null);
 
-  const fecha = new Date().toLocaleDateString("es-GT", { day: "numeric", month: "long", year: "numeric" });
-  const archivo = `Receta_${cita.mascota}_${new Date().toLocaleDateString("es-GT", { day: "2-digit", month: "short" }).replace(/\s|\./g, "")}.pdf`;
+  const fecha = new Date().toLocaleDateString("es-SV", { day: "numeric", month: "long", year: "numeric" });
+  const archivo = `Receta_${cita.mascota}_${new Date().toLocaleDateString("es-SV", { day: "2-digit", month: "short" }).replace(/\s|\./g, "")}.pdf`;
   const validos = items.filter((i) => i.medicamento.trim());
 
   const editar = (i: number, cambio: Partial<ItemReceta>) => setItems((xs) => xs.map((x, j) => (j === i ? { ...x, ...cambio } : x)));
 
   const enviar = () => {
     if (!validos.length) return;
-    const hora = new Date().toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit", hour12: false });
+    const hora = new Date().toLocaleTimeString("es-SV", { hour: "2-digit", minute: "2-digit", hour12: false });
     agregarReceta({ id: `rx${Date.now()}`, clienteId: cli.id, mascota: cita.mascota, hora, fecha: "Hoy", items: validos, indicaciones: indicaciones.trim() || undefined, estado: "enviada" });
     setEnviada(`${cita.mascota} · ${cli.nombre} (${cli.telefono})`);
   };
@@ -203,7 +203,7 @@ export default function RecetaPage() {
           </Card>
           <div className="flex h-fit gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-[12px] text-amber-900">
             <ShieldAlert size={16} className="shrink-0" />
-            <p>La receta la escribe y la firma el veterinario. Luna no la redacta ni la explica: si el cliente toca «Tengo una duda» o pregunta por la dosis, la conversación pasa a la secretaria.</p>
+            <p>La receta la escribe y la firma el veterinario. MIA no la redacta ni la explica: si el cliente toca «Tengo una duda» o pregunta por la dosis, la conversación pasa a la secretaria.</p>
           </div>
         </div>
       </div>

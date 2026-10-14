@@ -25,7 +25,7 @@ import { Card, MetricCard, PageHeader } from "@/components/ui";
 import { FacebookIcon, InstagramIcon, WhatsappIcon } from "@/components/glifos";
 
 // Publicaciones: posts para Instagram y Facebook y campañas por WhatsApp.
-// Las campañas usan plantillas de marketing; quien responde lo atiende Luna
+// Las campañas usan plantillas de marketing; quien responde lo atiende MIA
 // para agendar. Sin precios ni montos.
 
 type Tab = "posts" | "campanas";
@@ -42,13 +42,13 @@ export default function PublicacionesPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <PageHeader title="Publicaciones" sub="Publica posts en Instagram y Facebook y lanza campañas por WhatsApp. Luna atiende a quien responde y agenda la cita." />
+      <PageHeader title="Publicaciones" sub="Publica posts en Instagram y Facebook y lanza campañas por WhatsApp. MIA atiende a quien responde y agenda la cita." />
       <div className="space-y-5 p-4 sm:p-6">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <MetricCard Icon={Megaphone} valor={publicadas.length} label="Posts publicados (30 días)" hint={plural(posts.length - publicadas.length, "programado")} />
-          <MetricCard Icon={Eye} valor={alcance.toLocaleString("es-GT")} label="Alcance de los posts" />
+          <MetricCard Icon={Eye} valor={alcance.toLocaleString("es-SV")} label="Alcance de los posts" />
           <MetricCard Icon={Send} valor={enviadas.length} label="Campañas enviadas" hint={plural(campanas.length - enviadas.length, "programada")} />
-          <MetricCard Icon={CheckCheck} valor={citas} label="Citas agendadas por campañas" hint="Luna agendó al responder" />
+          <MetricCard Icon={CheckCheck} valor={citas} label="Citas agendadas por campañas" hint="MIA agendó al responder" />
         </div>
 
         <div className="inline-flex rounded-xl border border-line bg-card p-1 shadow-sm">
@@ -302,8 +302,8 @@ function PostTarjeta({ p, compacta }: { p: Post; compacta?: boolean }) {
         <div className="flex items-center gap-4 border-b border-line px-3 py-2 text-[12px] font-semibold text-[var(--text-2)]">
           <span className="flex items-center gap-1"><Heart size={13} /> {p.stats.meGusta}</span>
           <span className="flex items-center gap-1"><MessageCircle size={13} /> {p.stats.comentarios}</span>
-          <span className="flex items-center gap-1"><Eye size={13} /> {p.stats.alcance.toLocaleString("es-GT")}</span>
-          <span className="ml-auto flex items-center gap-1 text-brand" title="Mensajes recibidos por el post (los atiende Luna)">
+          <span className="flex items-center gap-1"><Eye size={13} /> {p.stats.alcance.toLocaleString("es-SV")}</span>
+          <span className="ml-auto flex items-center gap-1 text-brand" title="Mensajes recibidos por el post (los atiende MIA)">
             <Send size={12} /> {p.stats.mensajes} mensajes
           </span>
         </div>
@@ -485,7 +485,7 @@ function Campanas() {
           </div>
           <p className="flex items-start gap-1.5 rounded-xl bg-surface p-2.5 text-[11.5px] text-[var(--text-3)]">
             <ShieldCheck size={13} className="mt-0.5 shrink-0" />
-            Quien toca «Agendar cita» o responde lo atiende Luna en la bandeja. «No recibir más» marca al cliente y no vuelve a recibir campañas.
+            Quien toca «Agendar cita» o responde lo atiende MIA en la bandeja. «No recibir más» marca al cliente y no vuelve a recibir campañas.
           </p>
         </div>
       </div>

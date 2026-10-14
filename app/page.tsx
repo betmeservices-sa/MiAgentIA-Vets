@@ -9,8 +9,8 @@ import { pasaFiltro, useStore } from "@/lib/store";
 import type { Canal, Conversacion, Objetivo } from "@/lib/types";
 import { AgendaPill, Avatar, ChannelBadge, EstadoCitaPill, FiltroAgendaToggle } from "@/components/ui";
 
-// La bandeja no reparte clientes entre personas: Luna atiende todo, agenda y
-// reagenda sola. Las pestañas separan la reactivación y lo urgente que Luna
+// La bandeja no reparte clientes entre personas: MIA atiende todo, agenda y
+// reagenda sola. Las pestañas separan la reactivación y lo urgente que MIA
 // pasó a la clínica; los filtros son por canal y por prioridad.
 type Tab = "todas" | "reactivacion" | "urgencia";
 const TABS: { id: Tab; label: string }[] = [
@@ -28,9 +28,9 @@ function enTab(c: Conversacion, tab: Tab) {
 type Prioridad = "alta" | "media" | "baja";
 
 /**
- * Alta: urgencias y casos clínicos sin cerrar. Media: Luna la pasó a la clínica
+ * Alta: urgencias y casos clínicos sin cerrar. Media: MIA la pasó a la clínica
  * por otro motivo (precio especial, pidió hablar con alguien) o la clínica la
- * está atendiendo. Baja: Luna la resuelve sola.
+ * está atendiendo. Baja: MIA la resuelve sola.
  */
 function prioridad(c: Conversacion): Prioridad {
   if (c.estado === "resuelta") return "baja";
@@ -96,7 +96,7 @@ export default function BandejaPage() {
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-card px-5 py-3">
         <div>
           <h1 className="text-[20px] font-extrabold tracking-tight">Bandeja omnicanal</h1>
-          <p className="text-[12.5px] text-[var(--text-3)]">WhatsApp, Instagram y Facebook en un solo lugar · Luna agenda y reagenda sola en clínica y grooming</p>
+          <p className="text-[12.5px] text-[var(--text-3)]">WhatsApp, Instagram y Facebook en un solo lugar · MIA agenda y reagenda sola en clínica y grooming</p>
         </div>
         <FiltroAgendaToggle />
       </header>
@@ -243,7 +243,7 @@ function Item({ c, activa, onClick }: { c: Conversacion; activa: boolean; onClic
           ) : c.estado === "secretaria" ? (
             <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10.5px] font-semibold text-slate-600">IA en pausa</span>
           ) : c.estado === "ia" ? (
-            <span className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[10.5px] font-semibold text-violet-700">Luna en curso</span>
+            <span className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[10.5px] font-semibold text-violet-700">MIA en curso</span>
           ) : null}
           {cli.creadoPorIA && (
             <span className="inline-flex items-center gap-0.5 rounded-md bg-violet-50 px-1.5 py-0.5 text-[10.5px] font-semibold text-violet-700">
@@ -297,7 +297,7 @@ function Hilo({ c }: { c: Conversacion }) {
         <div className="flex items-center gap-1.5">
           {(c.estado === "secretaria" || c.estado === "transferida") && (
             <button type="button" onClick={() => devolverAIA(c.id)} className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[12.5px] font-bold text-white hover:bg-brand-dark">
-              <RotateCcw size={14} /> Que Luna siga (agendar)
+              <RotateCcw size={14} /> Que MIA siga (agendar)
             </button>
           )}
           {c.estado !== "resuelta" && (
@@ -311,7 +311,7 @@ function Hilo({ c }: { c: Conversacion }) {
       {c.estado === "transferida" && c.motivo && (
         <div className={cn("flex items-center gap-2 px-4 py-2 text-[12.5px] font-semibold", c.motivo === "urgencia" ? "bg-rose-600 text-white" : "bg-amber-50 text-amber-900")}>
           <AlertTriangle size={14} />
-          Luna la pasó a la clínica por {MOTIVO[c.motivo].label.toLowerCase()} hace {c.esperaMin} min y dejó de responder. Contesta aquí abajo.
+          MIA la pasó a la clínica por {MOTIVO[c.motivo].label.toLowerCase()} hace {c.esperaMin} min y dejó de responder. Contesta aquí abajo.
         </div>
       )}
 
@@ -333,7 +333,7 @@ function Hilo({ c }: { c: Conversacion }) {
                 {nuestro && (
                   <p className={cn("mb-0.5 flex items-center gap-1 text-[10.5px] font-bold", m.autor === "ia" ? "text-violet-700" : "text-white/80")}>
                     {m.autor === "ia" ? <Bot size={11} /> : <UserRound size={11} />}
-                    {m.autor === "ia" ? "Luna · agente IA" : STAFF.secretaria.nombre}
+                    {m.autor === "ia" ? "MIA · agente IA" : STAFF.secretaria.nombre}
                     {m.plantilla && <span className="ml-1 rounded bg-white/60 px-1 font-mono text-[9.5px]">plantilla: {m.plantilla}</span>}
                   </p>
                 )}
@@ -366,7 +366,7 @@ function Hilo({ c }: { c: Conversacion }) {
       >
         {c.estado === "ia" && (
           <p className="mb-2 flex items-center gap-1.5 text-[11.5px] text-[var(--text-3)]">
-            <Bot size={12} /> Luna está atendiendo. Si escribes, el agente queda en pausa en esta conversación.
+            <Bot size={12} /> MIA está atendiendo. Si escribes, el agente queda en pausa en esta conversación.
           </p>
         )}
         <div className="flex items-center gap-2">
@@ -398,7 +398,7 @@ function Ficha({ c }: { c: Conversacion }) {
           </p>
           <p className="mt-1 font-semibold text-[var(--text)]">{c.contacto.nombre}</p>
           <p className="text-[var(--text-2)]">{c.contacto.relacion} · {c.contacto.telefono}</p>
-          <p className="mt-1 text-[11.5px] text-violet-700">Luna lo agregó al perfil de {nombreMascota(c.contacto.mascota, cli)}. Abajo, el dueño registrado.</p>
+          <p className="mt-1 text-[11.5px] text-violet-700">MIA lo agregó al perfil de {nombreMascota(c.contacto.mascota, cli)}. Abajo, el dueño registrado.</p>
         </div>
       )}
       <div className="flex flex-col items-center text-center">
@@ -410,7 +410,7 @@ function Ficha({ c }: { c: Conversacion }) {
         <div className="mt-1.5 flex flex-wrap justify-center gap-1">
           {cli.creadoPorIA && (
             <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 px-1.5 py-0.5 text-[10.5px] font-semibold text-violet-700">
-              <Sparkles size={10} /> Perfil creado por Luna · por revisar
+              <Sparkles size={10} /> Perfil creado por MIA · por revisar
             </span>
           )}
           {cli.etiquetas?.map((e) => (
@@ -427,7 +427,7 @@ function Ficha({ c }: { c: Conversacion }) {
             <div className="text-[12.5px] leading-tight">
               <p className="flex items-center gap-1.5 font-bold">
                 {nombreMascota(m.nombre, cli)}
-                {m.creadaPorIA && <span className="rounded bg-violet-50 px-1 text-[9.5px] font-semibold text-violet-700">Nueva · Luna</span>}
+                {m.creadaPorIA && <span className="rounded bg-violet-50 px-1 text-[9.5px] font-semibold text-violet-700">Nueva · MIA</span>}
               </p>
               <p className="text-[var(--text-3)]">{m.especie} · {m.raza} · {m.edad}{m.tamano ? ` · ${m.tamano}` : ""}</p>
               {contactosDe(cli.id, m.nombre).map((k) => (

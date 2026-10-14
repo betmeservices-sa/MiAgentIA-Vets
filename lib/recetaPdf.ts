@@ -30,7 +30,7 @@ export async function recetaPdf(r: Receta) {
   doc.setFont("helvetica", "normal").setFontSize(9.5).setTextColor(...GRIS);
   doc.text(`${CLINICA.ciudad} · Tel. 2222-3344 · Urgencias fuera de horario: 2333-4455`, X, (y += 6));
   const [a, mes, d] = isoDeTexto(r.fecha).split("-").map(Number);
-  const fecha = new Date(a, mes - 1, d).toLocaleDateString("es-GT", { day: "numeric", month: "long", year: "numeric" });
+  const fecha = new Date(a, mes - 1, d).toLocaleDateString("es-SV", { day: "numeric", month: "long", year: "numeric" });
   doc.setFontSize(10).text(`Fecha: ${fecha}`, ancho - X, 22, { align: "right" });
   doc.setDrawColor(...VERDE).setLineWidth(0.8).line(X, (y += 4), ancho - X, y);
 

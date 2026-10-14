@@ -212,7 +212,7 @@ function Dueno({ c, acciones }: { c: Cliente; acciones: Acciones }) {
         <ChannelBadge canal={c.canal} label />
         {c.creadoPorIA && (
           <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11.5px] font-semibold text-violet-700">
-            <Sparkles size={11} /> Creado por Luna
+            <Sparkles size={11} /> Creado por MIA
           </span>
         )}
         {c.etiquetas?.map((e) => (
@@ -285,7 +285,7 @@ function Mascotas({
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-1.5">
                     <span className="font-bold">{nombreMascota(m.nombre, c)}</span>
-                    {m.creadaPorIA && <span className="rounded bg-violet-50 px-1 text-[10px] font-semibold text-violet-700">Nueva · Luna</span>}
+                    {m.creadaPorIA && <span className="rounded bg-violet-50 px-1 text-[10px] font-semibold text-violet-700">Nueva · MIA</span>}
                   </span>
                   <span className="block truncate text-[12px] text-[var(--text-3)]">
                     {m.especie} · {m.raza} · {m.edad}
@@ -315,7 +315,7 @@ function Mascotas({
                     </button>
                   </div>
                   {contactos.length === 0 ? (
-                    <p className="mt-1 text-[12px] text-[var(--text-3)]">Solo el dueño. Si escribe otra persona por {nombreMascota(m.nombre, c)}, Luna la agrega aquí.</p>
+                    <p className="mt-1 text-[12px] text-[var(--text-3)]">Solo el dueño. Si escribe otra persona por {nombreMascota(m.nombre, c)}, MIA la agrega aquí.</p>
                   ) : (
                     <div className="mt-1.5 space-y-1.5">
                       {contactos.map((k) => (
@@ -324,7 +324,7 @@ function Mascotas({
                             <UserPlus size={13} className="text-[var(--text-3)]" /> {k.nombre}
                             {k.creadoPorIA && (
                               <span className="inline-flex items-center gap-0.5 rounded bg-violet-100 px-1 text-[10px] font-semibold text-violet-700">
-                                <Sparkles size={9} /> Creado por Luna
+                                <Sparkles size={9} /> Creado por MIA
                               </span>
                             )}
                           </p>

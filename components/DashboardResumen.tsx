@@ -11,7 +11,7 @@ import { Card } from "./ui";
 // canal, publicaciones y campañas, e intervenciones de la clínica. Solo
 // conteos: sin montos ni cálculos de retorno.
 
-/** Límites del plan de Luna. */
+/** Límites del plan de MIA. */
 export const PLAN = { conversaciones: 1000, mensajesPorConversacion: 15 };
 
 // Colores por canal (validados juntos: CVD y contraste pasan).
@@ -39,15 +39,15 @@ function datosDelMes(total: number) {
   const motivos = reparte(totalPasadas, [0.4, 0.25, 0.23, 0.12]);
   const tramos = reparte(total, [0.233, 0.318, 0.359, 0.09]);
   return {
-    porCanal: { Conversaciones: conv, "Resueltas por Luna": resueltas, "Citas agendadas": citas, "Pasadas a la clínica": pasadas },
+    porCanal: { Conversaciones: conv, "Resueltas por MIA": resueltas, "Citas agendadas": citas, "Pasadas a la clínica": pasadas },
     motivos: ["Caso clínico", "Pidió hablar con alguien", "Excepción de precio", "Urgencia"].map((label, i) => ({ label, valor: motivos[i] })),
-    // Mensajes de Luna por conversación: cuántas conversaciones caen en cada tramo.
+    // Mensajes de MIA por conversación: cuántas conversaciones caen en cada tramo.
     tramos: ["1–5", "6–10", "11–15", "Más de 15"].map((label, i) => ({ label, valor: tramos[i] })),
     mensajes: Math.round(total * 11.8),
   };
 }
 
-/** Conversaciones con Luna por día, del 1 del mes a hoy (determinista). */
+/** Conversaciones con MIA por día, del 1 del mes a hoy (determinista). */
 function consumoDiario() {
   const hoy = fechaDe(0);
   const n = hoy.getDate();
@@ -59,7 +59,7 @@ function consumoDiario() {
     const base = domingo ? 12 : d.getDay() === 6 ? 22 : 30;
     // Hoy va a medias: el día no ha terminado.
     const valor = Math.round((base + r() * 10) * (i === n - 1 ? 0.55 : 1));
-    return { label: String(i + 1), valor, detalle: d.toLocaleDateString("es-GT", { weekday: "long", day: "numeric", month: "long" }) };
+    return { label: String(i + 1), valor, detalle: d.toLocaleDateString("es-SV", { weekday: "long", day: "numeric", month: "long" }) };
   });
 }
 
@@ -72,27 +72,27 @@ export function DashboardResumen() {
   const { porCanal: POR_CANAL, motivos: MOTIVOS, tramos: TRAMOS, mensajes } = datosDelMes(usadas);
   const renovadas = TRAMOS[3].valor;
   const totalConv = usadas;
-  const resueltas = POR_CANAL["Resueltas por Luna"].reduce((a, b) => a + b, 0);
+  const resueltas = POR_CANAL["Resueltas por MIA"].reduce((a, b) => a + b, 0);
   const pasadas = POR_CANAL["Pasadas a la clínica"].reduce((a, b) => a + b, 0);
-  const mes = hoy.toLocaleDateString("es-GT", { month: "long" });
+  const mes = hoy.toLocaleDateString("es-SV", { month: "long" });
 
   return (
     <div className="space-y-5">
       {/* Consumo de IA */}
       <Card
-        title="Consumo de IA · Luna"
-        sub={`Ciclo de ${mes}: del 1 al ${diasMes}. Plan: ${PLAN.conversaciones.toLocaleString("es-GT")} conversaciones al mes, hasta ${PLAN.mensajesPorConversacion} mensajes de Luna por conversación.`}
+        title="Consumo de IA · MIA"
+        sub={`Ciclo de ${mes}: del 1 al ${diasMes}. Plan: ${PLAN.conversaciones.toLocaleString("es-SV")} conversaciones al mes, hasta ${PLAN.mensajesPorConversacion} mensajes de MIA por conversación.`}
       >
         <div className="grid gap-5 xl:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
           <div className="space-y-4">
             <Medidor usadas={usadas} limite={PLAN.conversaciones} proyeccion={proyeccion} />
             <div className="grid grid-cols-2 gap-3">
-              <Dato Icon={MessagesSquare} valor={mensajes.toLocaleString("es-GT")} label="Mensajes de Luna" hint={`${(mensajes / totalConv).toFixed(1)} por conversación en promedio`} />
+              <Dato Icon={MessagesSquare} valor={mensajes.toLocaleString("es-SV")} label="Mensajes de MIA" hint={`${(mensajes / totalConv).toFixed(1)} por conversación en promedio`} />
               <Dato Icon={RefreshCw} valor={renovadas} label="Pasaron de 15 mensajes" hint="Se renovaron: cuentan como conversación nueva" />
             </div>
             <p className="flex items-start gap-1.5 rounded-xl bg-surface p-3 text-[12px] leading-snug text-[var(--text-2)]">
               <Info size={14} className="mt-0.5 shrink-0 text-[var(--text-3)]" />
-              Cuando una conversación llega a {PLAN.mensajesPorConversacion} mensajes de Luna, se abre una nueva que retoma desde donde se quedó: el cliente no nota el corte, pero suma una conversación más al consumo del mes.
+              Cuando una conversación llega a {PLAN.mensajesPorConversacion} mensajes de MIA, se abre una nueva que retoma desde donde se quedó: el cliente no nota el corte, pero suma una conversación más al consumo del mes.
             </p>
           </div>
           <div className="min-w-0 space-y-5">
@@ -102,7 +102,7 @@ export function DashboardResumen() {
               <Columnas datos={dias} color="var(--brand-blue)" unidad="conversaciones" resaltarUltimo alto={150} />
             </div>
             <div>
-              <p className="text-[13px] font-bold">Mensajes de Luna por conversación</p>
+              <p className="text-[13px] font-bold">Mensajes de MIA por conversación</p>
               <p className="text-[12px] text-[var(--text-3)]">Las de más de {PLAN.mensajesPorConversacion} se renovaron y contaron doble</p>
               <Columnas datos={TRAMOS} color="var(--brand-blue)" unidad="conversaciones" etiquetas alto={120} marcar={3} />
             </div>
@@ -118,16 +118,16 @@ export function DashboardResumen() {
       <div className="grid gap-5 xl:grid-cols-2">
         <Publicaciones />
         {/* Intervenciones */}
-        <Card title="Intervenciones de la clínica" sub="Conversaciones que Luna resolvió sola y las que pasó a una persona">
+        <Card title="Intervenciones de la clínica" sub="Conversaciones que MIA resolvió sola y las que pasó a una persona">
           <div className="grid grid-cols-2 gap-3">
-            <Dato Icon={Bot} valor={`${pct(resueltas, totalConv)}%`} label="Resueltas por Luna" hint={`${resueltas} de ${totalConv} conversaciones`} />
+            <Dato Icon={Bot} valor={`${pct(resueltas, totalConv)}%`} label="Resueltas por MIA" hint={`${resueltas} de ${totalConv} conversaciones`} />
             <Dato Icon={UserRound} valor={`${pct(pasadas, totalConv)}%`} label="Pasadas a la clínica" hint={`${pasadas} conversaciones`} />
           </div>
-          <Proporcion a={{ label: "Luna sola", valor: resueltas, color: "#7c3aed" }} b={{ label: "Clínica", valor: pasadas, color: "#d97706" }} />
+          <Proporcion a={{ label: "MIA sola", valor: resueltas, color: "#7c3aed" }} b={{ label: "Clínica", valor: pasadas, color: "#d97706" }} />
           <p className="mt-5 text-[13px] font-bold">Por qué pasó a la clínica</p>
           <Horizontales datos={MOTIVOS} color="#d97706" unidad="conversaciones" />
           <p className="mt-3 flex items-start gap-1.5 text-[11.5px] text-[var(--text-3)]">
-            <AlertTriangle size={12} className="mt-0.5 shrink-0" /> Luna nunca da orientación médica: los casos clínicos y urgencias siempre pasan a la clínica.
+            <AlertTriangle size={12} className="mt-0.5 shrink-0" /> MIA nunca da orientación médica: los casos clínicos y urgencias siempre pasan a la clínica.
           </p>
         </Card>
       </div>
@@ -189,10 +189,10 @@ function Medidor({ usadas, limite, proyeccion }: { usadas: number; limite: numbe
   const excede = proyeccion > limite;
   return (
     <div className="rounded-xl border border-line p-4">
-      <p className="text-[12.5px] font-medium text-[var(--text-2)]">Conversaciones con Luna este mes</p>
+      <p className="text-[12.5px] font-medium text-[var(--text-2)]">Conversaciones con MIA este mes</p>
       <p className="mt-1 flex items-baseline gap-1.5">
-        <span className="text-[34px] font-extrabold leading-none tracking-tight">{usadas.toLocaleString("es-GT")}</span>
-        <span className="text-[14px] font-semibold text-[var(--text-3)]">/ {limite.toLocaleString("es-GT")}</span>
+        <span className="text-[34px] font-extrabold leading-none tracking-tight">{usadas.toLocaleString("es-SV")}</span>
+        <span className="text-[14px] font-semibold text-[var(--text-3)]">/ {limite.toLocaleString("es-SV")}</span>
       </p>
       <div className="relative mt-3 h-3 rounded-full bg-surface-2" role="meter" aria-valuemin={0} aria-valuemax={limite} aria-valuenow={usadas} aria-label="Conversaciones usadas del plan">
         <div className="absolute inset-y-0 left-0 rounded-full bg-brand/25" style={{ width: `${pp}%` }} title={`Proyección: ${proyeccion}`} />
@@ -200,13 +200,13 @@ function Medidor({ usadas, limite, proyeccion }: { usadas: number; limite: numbe
       </div>
       <div className="mt-2 flex justify-between text-[11.5px] text-[var(--text-3)]">
         <span>{Math.round(p)}% usado</span>
-        <span>Quedan {(limite - usadas).toLocaleString("es-GT")}</span>
+        <span>Quedan {(limite - usadas).toLocaleString("es-SV")}</span>
       </div>
       <p className={cn("mt-3 flex items-start gap-1.5 rounded-lg px-2.5 py-2 text-[12px] font-semibold", excede ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800")}>
         {excede ? <AlertTriangle size={14} className="mt-0.5 shrink-0" /> : <Info size={14} className="mt-0.5 shrink-0" />}
         {excede
-          ? `Al ritmo actual el mes cierra en ~${proyeccion.toLocaleString("es-GT")}: pasaría el límite del plan.`
-          : `Al ritmo actual el mes cierra en ~${proyeccion.toLocaleString("es-GT")} de ${limite.toLocaleString("es-GT")}.`}
+          ? `Al ritmo actual el mes cierra en ~${proyeccion.toLocaleString("es-SV")}: pasaría el límite del plan.`
+          : `Al ritmo actual el mes cierra en ~${proyeccion.toLocaleString("es-SV")} de ${limite.toLocaleString("es-SV")}.`}
       </p>
     </div>
   );
@@ -418,11 +418,11 @@ function Horizontales({ datos, color, unidad }: { datos: { label: string; valor:
             <div className="h-3.5 flex-1">
               <div className="h-full rounded-r-[4px] transition-opacity" style={{ width: `${Math.max(2, (d.valor / max) * 100)}%`, backgroundColor: color, opacity: hover !== null && hover !== i ? 0.45 : 1 }} />
             </div>
-            <span className="w-12 shrink-0 text-right text-[12px] font-bold tabular-nums">{d.valor.toLocaleString("es-GT")}</span>
+            <span className="w-12 shrink-0 text-right text-[12px] font-bold tabular-nums">{d.valor.toLocaleString("es-SV")}</span>
           </div>
           {hover === i && d.detalle && (
             <Tip>
-              <b>{d.valor.toLocaleString("es-GT")}</b> {unidad} · {d.detalle}
+              <b>{d.valor.toLocaleString("es-SV")}</b> {unidad} · {d.detalle}
             </Tip>
           )}
         </div>

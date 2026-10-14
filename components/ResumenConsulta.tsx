@@ -332,7 +332,7 @@ export function ResumenModal({
                 )}
               </div>
               <p className="text-[11.5px] text-[var(--text-3)]">
-                Queda confirmada en el calendario de {cal === "clinica" ? "veterinaria" : "grooming"}. Luna le envía el recordatorio al cliente 24 h antes.
+                Queda confirmada en el calendario de {cal === "clinica" ? "veterinaria" : "grooming"}. MIA le envía el recordatorio al cliente 24 h antes.
               </p>
             </div>
           )}
@@ -340,7 +340,7 @@ export function ResumenModal({
 
         <p className="flex items-start gap-1.5 rounded-lg bg-surface px-3 py-2 text-[11.5px] text-[var(--text-3)]">
           <ShieldCheck size={13} className="mt-0.5 shrink-0" />
-          Uso interno de la clínica. Luna no envía ni explica este resumen al cliente; si hay control, solo le recuerda agendarlo.
+          Uso interno de la clínica. MIA no envía ni explica este resumen al cliente; si hay control, solo le recuerda agendarlo.
         </p>
       </div>
       <div className="mt-4 flex items-center justify-between gap-2">
@@ -498,7 +498,7 @@ export function RecetaModal({
 
         <p className="flex items-start gap-1.5 rounded-lg bg-surface px-3 py-2 text-[11.5px] text-[var(--text-3)]">
           <ShieldCheck size={13} className="mt-0.5 shrink-0" />
-          Si el cliente tiene dudas sobre el tratamiento, Luna lo pasa a la clínica: no explica tratamientos.
+          Si el cliente tiene dudas sobre el tratamiento, MIA lo pasa a la clínica: no explica tratamientos.
         </p>
       </div>
       <div className="mt-4 border-t border-line pt-4">
@@ -535,7 +535,7 @@ export function RecetaModal({
 export function ContactoModal({ c, mascota, onClose }: { c: Cliente; mascota: string; onClose: () => void }) {
   const { agregarContacto } = useStore();
   const [nombre, setNombre] = useState("");
-  const [telefono, setTelefono] = useState("+502 ");
+  const [telefono, setTelefono] = useState("+503 ");
   const [relacion, setRelacion] = useState("");
   const listo = nombre.trim() && telefono.replace(/\D/g, "").length >= 8 && relacion.trim();
   const campo = "w-full rounded-lg border border-line bg-surface px-3 py-2 text-[13px] outline-none focus:border-brand";
@@ -558,7 +558,7 @@ export function ContactoModal({ c, mascota, onClose }: { c: Cliente; mascota: st
         </Etiqueta>
         <p className="flex items-start gap-1.5 rounded-lg bg-surface px-3 py-2 text-[11.5px] text-[var(--text-3)]">
           <ShieldCheck size={13} className="mt-0.5 shrink-0" />
-          Cuando escriba desde este número, Luna lo reconoce como contacto de {mascota} y puede agendar sus citas. El dueño sigue siendo {c.nombre}.
+          Cuando escriba desde este número, MIA lo reconoce como contacto de {mascota} y puede agendar sus citas. El dueño sigue siendo {c.nombre}.
         </p>
       </div>
       <div className="mt-4 flex justify-end gap-2">

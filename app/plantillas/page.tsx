@@ -65,7 +65,7 @@ export default function PlantillasPage() {
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <PageHeader
         title="Plantillas de WhatsApp"
-        sub={`Crea y edita los mensajes que Luna puede enviar primero o fuera de la ventana de 24 h. Máximo ${MAX_PLANTILLAS} guardadas.`}
+        sub={`Crea y edita los mensajes que MIA puede enviar primero o fuera de la ventana de 24 h. Máximo ${MAX_PLANTILLAS} guardadas.`}
       />
       <div className="grid gap-5 p-4 sm:p-6 xl:grid-cols-[300px_minmax(0,1fr)]">
         {/* Lista */}
@@ -352,7 +352,7 @@ function Editor({
         </div>
         <p className="flex items-start gap-1.5 rounded-xl bg-surface p-2.5 text-[11.5px] text-[var(--text-3)]">
           <Info size={13} className="mt-0.5 shrink-0" />
-          Las variables se llenan con los datos de cada cliente al enviar. Si el cliente escribió en las últimas 24 h, Luna responde con texto libre y no usa plantilla.
+          Las variables se llenan con los datos de cada cliente al enviar. Si el cliente escribió en las últimas 24 h, MIA responde con texto libre y no usa plantilla.
         </p>
       </div>
     </div>

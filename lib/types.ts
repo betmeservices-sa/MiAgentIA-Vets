@@ -19,7 +19,7 @@ export interface ContactoSecundario {
   telefono: string;
   /** Relación con el dueño o la mascota: "Esposo de María José", "Hijo"… */
   relacion: string;
-  /** Lo agregó Luna en una conversación. */
+  /** Lo agregó MIA en una conversación. */
   creadoPorIA?: boolean;
   /** Cuándo se agregó (texto de demo). */
   desde?: string;
@@ -174,7 +174,7 @@ export interface Receta {
   canal?: "whatsapp" | "correo";
 }
 
-/** Resumen que escribe el veterinario al cerrar una consulta. Es interno: Luna no lo envía ni lo explica al cliente. */
+/** Resumen que escribe el veterinario al cerrar una consulta. Es interno: MIA no lo envía ni lo explica al cliente. */
 export interface ResumenConsulta {
   motivo: string;
   pesoKg?: string;

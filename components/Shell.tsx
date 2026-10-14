@@ -201,7 +201,7 @@ function BotonAviso({
   );
 }
 
-// Urgencias: conversaciones que Luna pasó a la clínica y esperan respuesta.
+// Urgencias: conversaciones que MIA pasó a la clínica y esperan respuesta.
 // Solo cliente y mascota; al tocar una se abre en la bandeja.
 function Urgencias() {
   const { abierto, setAbierto, ref } = useDropdown();
@@ -228,7 +228,7 @@ function Urgencias() {
           <div className="flex items-center justify-between bg-rose-50 px-4 py-3">
             <div>
               <p className="text-[14px] font-bold text-rose-800">Esperan respuesta de la clínica</p>
-              <p className="text-[12px] text-rose-700/80">Luna las pasó y dejó de responder</p>
+              <p className="text-[12px] text-rose-700/80">MIA las pasó y dejó de responder</p>
             </div>
             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#dc2626] px-1.5 text-[11px] font-bold text-white">{esperando.length}</span>
           </div>

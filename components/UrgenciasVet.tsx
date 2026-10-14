@@ -13,7 +13,7 @@ export interface Urgencia {
   conv: Conversacion;
   nombre: string;
   mascota: string;
-  /** Primer mensaje del cliente: lo que hizo que Luna la marcara como urgencia. */
+  /** Primer mensaje del cliente: lo que hizo que MIA la marcara como urgencia. */
   texto: string;
   marcada: string;
   decision?: UrgenciaVet;
@@ -40,7 +40,7 @@ export function useUrgencias(): Urgencia[] {
 }
 
 /**
- * Urgencias que marcó Luna, para el veterinario. Luna no evalúa: solo detecta
+ * Urgencias que marcó MIA, para el veterinario. MIA no evalúa: solo detecta
  * señales y transfiere. El veterinario decide si la recibe y a qué hora; al
  * elegir la hora queda en su agenda de hoy y la secretaria lo ve en la conversación.
  */
@@ -55,11 +55,11 @@ export function UrgenciasVet() {
         className={cn(lista.length > 0 && "border-rose-300")}
         title={
           <span className="flex items-center gap-2">
-            <Siren size={16} className="text-rose-600" /> Urgencias que marcó Luna
+            <Siren size={16} className="text-rose-600" /> Urgencias que marcó MIA
             {lista.length > 0 && <span className="rounded-full bg-rose-600 px-2 py-0.5 text-[11px] font-bold text-white">{lista.length}</span>}
           </span>
         }
-        sub="Luna no evalúa síntomas: detecta señales de urgencia y transfiere a la secretaria. Tú decides si la recibes y a qué hora."
+        sub="MIA no evalúa síntomas: detecta señales de urgencia y transfiere a la secretaria. Tú decides si la recibes y a qué hora."
       >
         {lista.length === 0 && <p className="text-[13px] text-[var(--text-3)]">No hay urgencias abiertas.</p>}
         <div className="space-y-3">
@@ -72,7 +72,7 @@ export function UrgenciasVet() {
                     <p className="text-[14px] font-bold">
                       {u.mascota} <span className="font-normal text-[var(--text-3)]">· {u.nombre}</span>
                     </p>
-                    <p className="mt-0.5 text-[12px] text-[var(--text-3)]">Marcada por Luna a las {u.marcada}</p>
+                    <p className="mt-0.5 text-[12px] text-[var(--text-3)]">Marcada por MIA a las {u.marcada}</p>
                   </div>
                   <span
                     className={cn(

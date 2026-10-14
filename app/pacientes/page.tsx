@@ -29,7 +29,7 @@ export default function PacientesPage() {
   const [canal, setCanal] = useState<"todos" | Canal>("todos");
   const [especie, setEspecie] = useState<"todas" | "Perro" | "Gato">("todas");
   const [orden, setOrden] = useState<Orden>({ col: "ultima", asc: false });
-  // Perfiles creados por Luna que recepción ya revisó (en el demo vive solo en esta pantalla).
+  // Perfiles creados por MIA que recepción ya revisó (en el demo vive solo en esta pantalla).
   const [revisados, setRevisados] = useState<Set<string>>(new Set());
 
   const abrirChat = (id: string) => {
@@ -60,7 +60,7 @@ export default function PacientesPage() {
     { id: "todos", label: "Todos los pacientes" },
     { id: "confirmar", label: "Cita por confirmar" },
     { id: "tratamiento", label: "En tratamiento" },
-    { id: "luna", label: "Creados por Luna" },
+    { id: "luna", label: "Creados por MIA" },
     { id: "revisar", label: "Por revisar" },
   ];
 
@@ -162,7 +162,7 @@ export default function PacientesPage() {
                             {tratamiento && <span className="rounded bg-emerald-50 px-1 text-[10.5px] font-semibold text-emerald-700">En tratamiento</span>}
                             {deLuna && (
                               <span className="inline-flex items-center gap-0.5 rounded bg-violet-50 px-1 text-[10.5px] font-semibold text-violet-700">
-                                <Sparkles size={10} /> {porRevisar ? "Por revisar" : "Luna · revisado"}
+                                <Sparkles size={10} /> {porRevisar ? "Por revisar" : "MIA · revisado"}
                               </span>
                             )}
                           </div>

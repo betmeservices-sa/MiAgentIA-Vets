@@ -131,7 +131,7 @@ export default function AgendasPage() {
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-4 text-[11.5px] text-[var(--text-3)]">
-          <span className="flex items-center gap-1"><Bot size={12} /> Agendada por Luna (IA)</span>
+          <span className="flex items-center gap-1"><Bot size={12} /> Agendada por MIA (IA)</span>
           <span className="flex items-center gap-1"><UserRound size={12} /> Agendada por recepción</span>
           <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" /> Por confirmar</span>
           <span>Las dos agendas nunca se mezclan: una cita de grooming no puede caer en el calendario del veterinario.</span>

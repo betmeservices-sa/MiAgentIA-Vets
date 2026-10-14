@@ -101,7 +101,7 @@ export default function RecordatoriosPage() {
         agenda: "clinica",
         clienteId: r.clienteId,
         titulo: `Duda sobre la receta de ${nombreMascota(r.mascota, cli)}`,
-        detalle: "Luna no explica tratamientos: el veterinario o recepción debe responder.",
+        detalle: "MIA no explica tratamientos: el veterinario o recepción debe responder.",
       });
     }
     // Primero lo sin hora (tareas del día), luego por hora.
@@ -187,7 +187,7 @@ export default function RecordatoriosPage() {
           );
         })}
         <p className="flex items-center justify-center gap-1.5 text-center text-[11.5px] text-[var(--text-3)]">
-          <BellRing size={12} /> Los recordatorios que recibe el cliente los manda Luna 24 h antes de cada cita.
+          <BellRing size={12} /> Los recordatorios que recibe el cliente los manda MIA 24 h antes de cada cita.
         </p>
       </div>
     </div>
