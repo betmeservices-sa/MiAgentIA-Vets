@@ -614,7 +614,6 @@ export const RESUMENES: Record<string, ResumenConsulta> = {
   h2: {
     motivo: "Se rasca mucho las orejas desde hace una semana.",
     pesoKg: "32.4",
-    temperaturaC: "38.6",
     hallazgos: "Enrojecimiento leve en pabellón auricular izquierdo, sin secreción ni mal olor.",
     diagnostico: "Dermatitis alérgica leve",
     tratamiento: "Shampoo medicado 2 veces por semana. Cambio a alimento con proteína hidrolizada.",
@@ -625,7 +624,6 @@ export const RESUMENES: Record<string, ResumenConsulta> = {
   h1: {
     motivo: "Refuerzo anual de vacuna múltiple.",
     pesoKg: "31.8",
-    temperaturaC: "38.4",
     hallazgos: "Paciente sano, buena condición corporal.",
     diagnostico: "Sano",
     tratamiento: "Vacuna múltiple aplicada.",
@@ -636,7 +634,6 @@ export const RESUMENES: Record<string, ResumenConsulta> = {
   h5: {
     motivo: "Chequeo anual.",
     pesoKg: "11.2",
-    temperaturaC: "38.5",
     hallazgos: "Sin hallazgos relevantes. Dientes con sarro leve.",
     diagnostico: "Sano",
     tratamiento: "Recomendada limpieza dental en los próximos meses.",
@@ -647,7 +644,6 @@ export const RESUMENES: Record<string, ResumenConsulta> = {
   h7: {
     motivo: "Pérdida de pelo en el lomo y rascado.",
     pesoKg: "4.1",
-    temperaturaC: "38.9",
     hallazgos: "Zonas de alopecia con descamación en región lumbar.",
     diagnostico: "Dermatitis (en estudio)",
     tratamiento: "Tratamiento tópico por 14 días. Control para evaluar evolución.",
@@ -658,7 +654,6 @@ export const RESUMENES: Record<string, ResumenConsulta> = {
   h8: {
     motivo: "Cojea de la pata trasera derecha desde hace 2 días.",
     pesoKg: "12.7",
-    temperaturaC: "38.7",
     hallazgos: "Dolor a la manipulación de rodilla derecha. Sin inestabilidad evidente.",
     diagnostico: "Esguince leve de rodilla (descartar lesión de ligamento si no mejora)",
     tratamiento: "Antiinflamatorio 7 días, condroprotector 30 días. Reposo 10 días.",
@@ -679,7 +674,6 @@ export const RESUMENES: Record<string, ResumenConsulta> = {
   "cita-a1": {
     motivo: "Sacude la cabeza y tiene mal olor en los oídos.",
     pesoKg: "14.3",
-    temperaturaC: "38.8",
     hallazgos: "Secreción café en ambos oídos, conducto enrojecido.",
     diagnostico: "Otitis externa bilateral",
     tratamiento: "Gotas óticas 7 días y antiinflamatorio 5 días. Limpieza de oídos antes de cada aplicación.",

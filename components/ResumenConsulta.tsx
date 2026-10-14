@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronDown, ClipboardPen, NotebookPen, ShieldCheck, X, type LucideIcon } from "lucide-react";
+import { CalendarPlus, ChevronDown, ClipboardPen, NotebookPen, ShieldCheck, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { fechaDe, fechaLegible, iso } from "@/lib/format";
+import { espaciosLibres, horario } from "@/lib/agenda";
+import { AGENDA_INFO, etiquetaDia, fechaDe, fechaLegible, iso } from "@/lib/format";
 import { STAFF } from "@/lib/seed";
 import { ahora, useStore } from "@/lib/store";
-import type { Cliente, ResumenConsulta, Visita } from "@/lib/types";
+import type { Agenda, Cita, Cliente, ResumenConsulta, Visita } from "@/lib/types";
 
 /** Resumen de consulta en solo lectura. */
 export function ResumenBloque({ r, className }: { r: ResumenConsulta; className?: string }) {
@@ -20,10 +21,9 @@ export function ResumenBloque({ r, className }: { r: ResumenConsulta; className?
   ];
   return (
     <div className={cn("rounded-lg border-l-[3px] border-[var(--clinica)] bg-[var(--clinica-soft)]/60 px-3 py-2.5 text-[12.5px]", className)}>
-      {(r.pesoKg || r.temperaturaC) && (
+      {r.pesoKg && (
         <div className="mb-2 flex flex-wrap gap-2">
-          {r.pesoKg && <span className="rounded-md bg-card px-2 py-0.5 font-semibold">Peso {r.pesoKg} kg</span>}
-          {r.temperaturaC && <span className="rounded-md bg-card px-2 py-0.5 font-semibold">Temp. {r.temperaturaC} °C</span>}
+          <span className="rounded-md bg-card px-2 py-0.5 font-semibold">Peso {r.pesoKg} kg</span>
         </div>
       )}
       <dl className="space-y-1.5">
@@ -46,12 +46,55 @@ export function ResumenBloque({ r, className }: { r: ResumenConsulta; className?
 const CONTROLES = ["No requiere", "En 3 días", "En 7 días", "En 14 días", "En 30 días"];
 const NUEVA = "__nueva__";
 
+// Servicios que se pueden agendar desde el resumen, con su duración en minutos.
+const SERVICIOS: Record<Agenda, [string, number][]> = {
+  clinica: [
+    ["Control post consulta", 20],
+    ["Consulta general", 30],
+    ["Vacuna múltiple", 20],
+    ["Vacuna antirrábica", 15],
+    ["Desparasitación", 15],
+  ],
+  grooming: [
+    ["Baño (pequeño)", 120],
+    ["Baño (mediano)", 120],
+    ["Baño (grande)", 120],
+    ["Baño y corte (pequeño)", 120],
+    ["Baño y corte (mediano)", 120],
+    ["Baño y corte (grande)", 120],
+    ["Corte de uñas", 120],
+  ],
+};
+
+/** Primer día con atención a partir de `desde` días (salta domingos). */
+function diaHabil(agenda: Agenda, desde: number) {
+  let d = Math.max(1, desde);
+  while (!horario(agenda, d)) d++;
+  return d;
+}
+
+/** Días que se ofrecen para agendar: las próximas 5 semanas con atención. */
+function diasDisponibles(agenda: Agenda) {
+  return Array.from({ length: 35 }, (_, i) => i + 1).filter((d) => horario(agenda, d));
+}
+
 /**
  * Formulario del veterinario para resumir una consulta. Se puede resumir una
  * visita ya atendida o registrar una consulta de hoy sin cita.
  */
-export function ResumenModal({ c, visita, onClose }: { c: Cliente; visita?: Visita; onClose: () => void }) {
-  const { visitas, resumenes, guardarResumen } = useStore();
+export function ResumenModal({
+  c,
+  visita,
+  onClose,
+  onAgendada,
+}: {
+  c: Cliente;
+  visita?: Visita;
+  onClose: () => void;
+  /** Avisa qué cita se agendó para mostrarlo en la ficha. */
+  onAgendada?: (cita: Cita) => void;
+}) {
+  const { visitas, resumenes, guardarResumen, agregarCita } = useStore();
   const [mascota, setMascota] = useState(visita?.mascota ?? c.mascotas[0].nombre);
   const pendientes = visitas
     .filter((v) => v.clienteId === c.id && v.agenda === "clinica" && v.mascota === mascota && !resumenes[v.id])
@@ -62,14 +105,41 @@ export function ResumenModal({ c, visita, onClose }: { c: Cliente; visita?: Visi
   const [f, setF] = useState({
     motivo: previo?.motivo ?? "",
     pesoKg: previo?.pesoKg ?? "",
-    temperaturaC: previo?.temperaturaC ?? "",
     hallazgos: previo?.hallazgos ?? "",
     diagnostico: previo?.diagnostico ?? "",
     tratamiento: previo?.tratamiento ?? "",
     proximoControl: previo?.proximoControl ?? "No requiere",
   });
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
-  const completo = f.motivo.trim() && f.hallazgos.trim() && f.diagnostico.trim() && f.tratamiento.trim();
+
+  // Agendar la próxima cita desde el resumen: queda en el calendario que corresponda.
+  const [agendar, setAgendar] = useState(false);
+  const [cal, setCal] = useState<Agenda>("clinica");
+  const [servicio, setServicio] = useState(SERVICIOS.clinica[0][0]);
+  const [dia, setDia] = useState(() => diaHabil("clinica", 1));
+  const libres = agendar ? espaciosLibres(cal, dia) : [];
+  const [hora, setHora] = useState("");
+  const horaValida = libres.includes(hora) ? hora : "";
+
+  const elegirControl = (x: string) => {
+    setF((y) => ({ ...y, proximoControl: x }));
+    const n = Number(x.match(/\d+/)?.[0]);
+    if (!n) return;
+    // Al elegir un control se propone agendarlo ese día en la clínica.
+    setAgendar(true);
+    setCal("clinica");
+    setServicio("Control post consulta");
+    setDia(diaHabil("clinica", n));
+    setHora("");
+  };
+  const cambiarCal = (a: Agenda) => {
+    setCal(a);
+    setServicio(SERVICIOS[a][0][0]);
+    setDia((d) => diaHabil(a, d));
+    setHora("");
+  };
+
+  const completo = f.motivo.trim() && f.hallazgos.trim() && f.diagnostico.trim() && f.tratamiento.trim() && (!agendar || horaValida);
 
   const guardar = () => {
     if (!completo) return;
@@ -89,7 +159,6 @@ export function ResumenModal({ c, visita, onClose }: { c: Cliente; visita?: Visi
     guardarResumen(v, {
       motivo: f.motivo.trim(),
       pesoKg: f.pesoKg.trim() || undefined,
-      temperaturaC: f.temperaturaC.trim() || undefined,
       hallazgos: f.hallazgos.trim(),
       diagnostico: f.diagnostico.trim(),
       tratamiento: f.tratamiento.trim(),
@@ -97,6 +166,22 @@ export function ResumenModal({ c, visita, onClose }: { c: Cliente; visita?: Visi
       autor: STAFF.veterinario.nombre,
       escrito: `Hoy · ${hora}`,
     });
+    if (agendar && horaValida) {
+      const cita: Cita = {
+        id: `m${Date.now()}`,
+        agenda: cal,
+        clienteId: c.id,
+        mascota: v.mascota,
+        servicio,
+        dia,
+        hora: horaValida,
+        duracionMin: SERVICIOS[cal].find(([s]) => s === servicio)?.[1] ?? 30,
+        estado: "confirmada",
+        origen: "manual",
+      };
+      agregarCita(cita);
+      onAgendada?.(cita);
+    }
     onClose();
   };
 
@@ -139,12 +224,9 @@ export function ResumenModal({ c, visita, onClose }: { c: Cliente; visita?: Visi
         <Etiqueta texto="Motivo de consulta *">
           <input value={f.motivo} onChange={set("motivo")} placeholder="Lo que cuenta el dueño" className={campo} />
         </Etiqueta>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="sm:w-1/2">
           <Etiqueta texto="Peso (kg)">
             <input value={f.pesoKg} onChange={set("pesoKg")} inputMode="decimal" placeholder="Ej. 12.5" className={campo} />
-          </Etiqueta>
-          <Etiqueta texto="Temperatura (°C)">
-            <input value={f.temperaturaC} onChange={set("temperaturaC")} inputMode="decimal" placeholder="Ej. 38.5" className={campo} />
           </Etiqueta>
         </div>
         <Etiqueta texto="Hallazgos del examen *">
@@ -162,7 +244,7 @@ export function ResumenModal({ c, visita, onClose }: { c: Cliente; visita?: Visi
               <button
                 key={x}
                 type="button"
-                onClick={() => setF((y) => ({ ...y, proximoControl: x }))}
+                onClick={() => elegirControl(x)}
                 className={cn(
                   "rounded-full border px-3 py-1 text-[12.5px] font-semibold",
                   f.proximoControl === x ? "border-[var(--clinica)] bg-[var(--clinica)] text-white" : "border-line text-[var(--text-2)] hover:bg-surface",
@@ -173,6 +255,83 @@ export function ResumenModal({ c, visita, onClose }: { c: Cliente; visita?: Visi
             ))}
           </div>
         </Etiqueta>
+
+        <div className={cn("rounded-xl border p-3", agendar ? "border-[var(--clinica)]/50 bg-[var(--clinica-soft)]/40" : "border-line")}>
+          <label className="flex cursor-pointer items-center gap-2 text-[13px] font-bold">
+            <input type="checkbox" checked={agendar} onChange={(e) => setAgendar(e.target.checked)} className="h-4 w-4 accent-[var(--clinica)]" />
+            <CalendarPlus size={15} /> Agendar próxima cita para {visita?.mascota ?? mascota}
+          </label>
+          {agendar && (
+            <div className="mt-3 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Etiqueta texto="Calendario">
+                  <div className="inline-flex w-full rounded-lg border border-line bg-surface p-0.5">
+                    {(["clinica", "grooming"] as Agenda[]).map((a) => (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => cambiarCal(a)}
+                        className={cn("flex-1 rounded-md px-2 py-1.5 text-[12.5px] font-semibold", cal === a ? "text-white" : "text-[var(--text-2)]")}
+                        style={cal === a ? { backgroundColor: AGENDA_INFO[a].color } : undefined}
+                      >
+                        {a === "clinica" ? "Veterinaria" : "Grooming"}
+                      </button>
+                    ))}
+                  </div>
+                </Etiqueta>
+                <Etiqueta texto="Servicio">
+                  <select value={servicio} onChange={(e) => setServicio(e.target.value)} className={campo}>
+                    {SERVICIOS[cal].map(([s]) => (
+                      <option key={s}>{s}</option>
+                    ))}
+                  </select>
+                </Etiqueta>
+              </div>
+              <Etiqueta texto="Día">
+                <select
+                  value={dia}
+                  onChange={(e) => {
+                    setDia(Number(e.target.value));
+                    setHora("");
+                  }}
+                  className={campo}
+                >
+                  {diasDisponibles(cal).map((d) => (
+                    <option key={d} value={d}>
+                      {etiquetaDia(d)}{d > 1 ? ` · en ${d} días` : ""}
+                    </option>
+                  ))}
+                </select>
+              </Etiqueta>
+              <div>
+                <span className="mb-1 block text-[12px] font-semibold text-[var(--text-2)]">Hora disponible *</span>
+                {libres.length === 0 ? (
+                  <p className="text-[12.5px] text-amber-700">No hay espacios libres ese día. Elige otro día.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {libres.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setHora(h)}
+                        className={cn(
+                          "rounded-lg border px-2.5 py-1 text-[12.5px] font-semibold tabular-nums",
+                          horaValida === h ? "border-transparent text-white" : "border-line bg-card text-[var(--text-2)] hover:bg-surface",
+                        )}
+                        style={horaValida === h ? { backgroundColor: AGENDA_INFO[cal].color } : undefined}
+                      >
+                        {h}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p className="text-[11.5px] text-[var(--text-3)]">
+                Queda confirmada en el calendario de {cal === "clinica" ? "veterinaria" : "grooming"}. Luna le envía el recordatorio al cliente 24 h antes.
+              </p>
+            </div>
+          )}
+        </div>
 
         <p className="flex items-start gap-1.5 rounded-lg bg-surface px-3 py-2 text-[11.5px] text-[var(--text-3)]">
           <ShieldCheck size={13} className="mt-0.5 shrink-0" />
@@ -189,7 +348,7 @@ export function ResumenModal({ c, visita, onClose }: { c: Cliente; visita?: Visi
             disabled={!completo}
             className="rounded-lg bg-[var(--clinica)] px-3 py-1.5 text-[13px] font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Guardar resumen
+            {agendar ? "Guardar y agendar" : "Guardar resumen"}
           </button>
         </div>
       </div>

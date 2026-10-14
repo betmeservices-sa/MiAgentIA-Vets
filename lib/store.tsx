@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { CONVERSACIONES, NOTAS, RECETAS, RESUMENES, VISITAS, cliente } from "./seed";
-import type { Agenda, Conversacion, Mensaje, Nota, Receta, ResumenConsulta, Visita } from "./types";
+import { CITAS, CONVERSACIONES, NOTAS, RECETAS, RESUMENES, VISITAS, cliente } from "./seed";
+import type { Agenda, Cita, Conversacion, Mensaje, Nota, Receta, ResumenConsulta, Visita } from "./types";
 
 /** Filtro global: todo, solo clínica o solo grooming. */
 export type FiltroAgenda = "todas" | Agenda;
@@ -30,6 +30,9 @@ interface Estado {
   /** Calendario que se ve en /agendas (lo eligen los botones de la barra de arriba). */
   calendario: Agenda;
   setCalendario: (a: Agenda) => void;
+  /** Día (offset desde hoy) que el calendario debe mostrar al abrirse; 0 = esta semana. */
+  diaCalendario: number;
+  setDiaCalendario: (d: number) => void;
   /** Conversación abierta en la bandeja. */
   convSel: string;
   setConvSel: (id: string) => void;
@@ -43,6 +46,10 @@ interface Estado {
   guardarResumen: (visita: Visita, resumen: ResumenConsulta) => void;
   notas: Nota[];
   agregarNota: (n: Nota) => void;
+  /** Agenda una cita nueva: aparece en el calendario, recordatorios y ficha del paciente. */
+  agregarCita: (c: Cita) => void;
+  /** Sube cada vez que cambian las citas, para que las vistas se vuelvan a pintar. */
+  citasVersion: number;
 }
 
 const Ctx = createContext<Estado | null>(null);
@@ -62,6 +69,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [filtro, setFiltroState] = useState<FiltroAgenda>("todas");
   const [conversaciones, setConvs] = useState<Conversacion[]>(CONVERSACIONES);
   const [calendario, setCalendario] = useState<Agenda>("clinica");
+  const [diaCalendario, setDiaCalendario] = useState(0);
   const [convSel, setConvSel] = useState("v3");
 
   // El filtro se recuerda por navegador: es una preferencia de vista.
@@ -169,6 +177,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const agregarNota = useCallback((n: Nota) => setNotas((ns) => [n, ...ns]), []);
 
+  // Las vistas de agenda leen CITAS directamente (lib/agenda), así que la cita
+  // nueva se agrega a esa lista y el contador avisa que hay que repintar.
+  const [citasVersion, setCitasVersion] = useState(0);
+  const agregarCita = useCallback((c: Cita) => {
+    CITAS.push(c);
+    setCitasVersion((v) => v + 1);
+  }, []);
+
   const conversacionDe = useCallback(
     (clienteId: string) => {
       const existente = conversaciones.find((c) => c.clienteId === clienteId);
@@ -196,7 +212,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ filtro, setFiltro, conversaciones, tomar, devolverAIA, resolver, enviar, marcarLeida, urgencias, agendarUrgencia, cerrarUrgencia, recetas, agregarReceta, calendario, setCalendario, convSel, setConvSel, conversacionDe, visitas, resumenes, guardarResumen, notas, agregarNota }}
+      value={{ filtro, setFiltro, conversaciones, tomar, devolverAIA, resolver, enviar, marcarLeida, urgencias, agendarUrgencia, cerrarUrgencia, recetas, agregarReceta, calendario, setCalendario, diaCalendario, setDiaCalendario, convSel, setConvSel, conversacionDe, visitas, resumenes, guardarResumen, notas, agregarNota, agregarCita, citasVersion }}
     >
       {children}
     </Ctx.Provider>

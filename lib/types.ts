@@ -160,7 +160,6 @@ export interface Receta {
 export interface ResumenConsulta {
   motivo: string;
   pesoKg?: string;
-  temperaturaC?: string;
   hallazgos: string;
   diagnostico: string;
   tratamiento: string;

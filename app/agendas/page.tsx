@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bot, CalendarDays, ChevronLeft, ChevronRight, RefreshCw, UserRound } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { AGENDA_INFO, diaCorto, minutosDe } from "@/lib/format";
@@ -15,12 +15,15 @@ const PX = 1.1; // px por minuto
 
 export default function AgendasPage() {
   // El calendario se elige con los botones Veterinaria / Grooming de la barra de arriba.
-  const { calendario: agenda } = useStore();
-  const [semana, setSemana] = useState(0);
+  const { calendario: agenda, diaCalendario, setDiaCalendario } = useStore();
+  const hoy = new Date().getDay();
+  const lunesActual = hoy === 0 ? -6 : 1 - hoy;
+  // Abre en la semana del día pedido (por ejemplo, una cita recién agendada).
+  const [semana, setSemana] = useState(() => Math.floor((diaCalendario - lunesActual) / 7));
+  useEffect(() => setDiaCalendario(0), [setDiaCalendario]);
 
   // Lunes de la semana actual como offset en días.
-  const hoy = new Date().getDay();
-  const lunes = (hoy === 0 ? -6 : 1 - hoy) + semana * 7;
+  const lunes = lunesActual + semana * 7;
   const dias = Array.from({ length: 6 }, (_, i) => lunes + i);
   const info = AGENDA_INFO[agenda];
   const cal = CALENDARIOS[agenda];

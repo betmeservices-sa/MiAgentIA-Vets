@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -22,12 +22,13 @@ import {
   Search,
   Sparkles,
   Stethoscope,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { AGENDA_INFO, etiquetaDia, fechaLegible, isoDeTexto, mesLegible, recetaEnCurso } from "@/lib/format";
 import { CITAS, CLIENTES, STAFF } from "@/lib/seed";
 import { useStore } from "@/lib/store";
-import type { Agenda, Cliente, Conversacion, Nota, Receta, Visita } from "@/lib/types";
+import type { Agenda, Cita, Cliente, Conversacion, Nota, Receta, Visita } from "@/lib/types";
 import { AgendaPill, Avatar, ChannelBadge, EstadoCitaPill } from "@/components/ui";
 import { Menu, NotaModal, ResumenBloque, ResumenModal } from "@/components/ResumenConsulta";
 
@@ -52,9 +53,15 @@ type Modal = { tipo: "resumen"; visita?: Visita } | { tipo: "nota" } | null;
 
 function Ficha({ c }: { c: Cliente }) {
   const router = useRouter();
-  const { conversacionDe, setConvSel, setCalendario, visitas, conversaciones } = useStore();
+  const { conversacionDe, setConvSel, setCalendario, setDiaCalendario, visitas, conversaciones } = useStore();
   const [modal, setModal] = useState<Modal>(null);
   const [tab, setTab] = useState<Tab>("overview");
+  const [agendada, setAgendada] = useState<Cita | null>(null);
+  useEffect(() => {
+    if (!agendada) return;
+    const t = setTimeout(() => setAgendada(null), 8000);
+    return () => clearTimeout(t);
+  }, [agendada]);
 
   const suyas = useMemo(() => visitas.filter((v) => v.clienteId === c.id), [visitas, c.id]);
   const conv = conversaciones.find((x) => x.clienteId === c.id);
@@ -63,8 +70,9 @@ function Ficha({ c }: { c: Cliente }) {
     setConvSel(conversacionDe(c.id));
     router.push("/");
   };
-  const agendar = (a: Agenda) => {
+  const agendar = (a: Agenda, dia = 0) => {
     setCalendario(a);
+    setDiaCalendario(dia);
     router.push("/agendas");
   };
   const acciones = { abrirConversacion, agendar, resumir: (v?: Visita) => setModal({ tipo: "resumen", visita: v }), nota: () => setModal({ tipo: "nota" }) };
@@ -85,7 +93,21 @@ function Ficha({ c }: { c: Cliente }) {
         </div>
       </div>
 
-      {modal?.tipo === "resumen" && <ResumenModal c={c} visita={modal.visita} onClose={() => setModal(null)} />}
+      {modal?.tipo === "resumen" && <ResumenModal c={c} visita={modal.visita} onClose={() => setModal(null)} onAgendada={setAgendada} />}
+      {agendada && (
+        <div role="status" className="fixed bottom-4 left-1/2 z-[70] flex w-[min(520px,calc(100vw-32px))] -translate-x-1/2 items-center gap-3 rounded-xl bg-[var(--text)] px-4 py-3 text-[13px] text-white shadow-2xl">
+          <CalendarPlus size={18} className="shrink-0" />
+          <span className="min-w-0 flex-1">
+            Cita agendada: <b>{agendada.servicio}</b> de {agendada.mascota}, {etiquetaDia(agendada.dia).toLowerCase()} a las {agendada.hora}.
+          </span>
+          <button type="button" onClick={() => agendar(agendada.agenda, agendada.dia)} className="shrink-0 font-bold text-violet-300 hover:underline">
+            Ver en calendario
+          </button>
+          <button type="button" onClick={() => setAgendada(null)} aria-label="Cerrar aviso" className="shrink-0 text-white/60 hover:text-white">
+            <X size={16} />
+          </button>
+        </div>
+      )}
       {modal?.tipo === "nota" && <NotaModal c={c} onClose={() => setModal(null)} />}
     </div>
   );
