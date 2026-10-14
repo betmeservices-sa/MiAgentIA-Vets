@@ -70,10 +70,10 @@ export const CONOCIMIENTO = {
 };
 
 export const CLIENTES: Cliente[] = [
-  { id: "c1", nombre: "María José Pérez", telefono: "+502 5512 3344", correo: "mariajose.perez@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Max", especie: "Perro", raza: "Labrador", edad: "3 años", tamano: "Grande" }], ultimaClinica: "12 ago 2026", ultimaGrooming: "20 sep 2026", etiquetas: ["Cliente frecuente"] },
+  { id: "c1", nombre: "María José Pérez", telefono: "+502 5512 3344", correo: "mariajose.perez@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Max", especie: "Perro", raza: "Labrador", edad: "3 años", tamano: "Grande", contactos: [{ nombre: "Jorge Pérez", telefono: "+502 5598 1200", relacion: "Esposo de María José", creadoPorIA: true, desde: "Hoy" }] }], ultimaClinica: "12 ago 2026", ultimaGrooming: "20 sep 2026", etiquetas: ["Cliente frecuente"] },
   { id: "c2", nombre: "Jorge Castillo", telefono: "+502 4421 9087", correo: "jorge.castillo@hotmail.com", canal: "instagram", mascotas: [{ nombre: "Toby", especie: "Perro", raza: "Schnauzer", edad: "5 años", tamano: "Mediano" }, { nombre: "Bimba", especie: "Perro", raza: "Cocker spaniel", edad: "2 años", tamano: "Mediano", creadaPorIA: true }], ultimaGrooming: "15 jul 2026" },
   { id: "c3", nombre: "Ana Lucía Morales", telefono: "+502 3098 7765", correo: "analucia.morales@yahoo.com", canal: "whatsapp", mascotas: [{ nombre: "Coco", especie: "Perro", raza: "Beagle", edad: "2 años", tamano: "Mediano" }], ultimaClinica: "3 sep 2026" },
-  { id: "c4", nombre: "Roberto Gálvez", telefono: "+502 5590 1123", correo: "roberto.galvez@outlook.com", canal: "facebook", mascotas: [{ nombre: "Rocky", especie: "Perro", raza: "Pastor alemán", edad: "4 años", tamano: "Grande" }, { nombre: "Luna", especie: "Perro", raza: "Pastor alemán", edad: "4 años", tamano: "Grande" }, { nombre: "Thor", especie: "Perro", raza: "Husky", edad: "2 años", tamano: "Grande" }], ultimaGrooming: "2 ago 2026" },
+  { id: "c4", nombre: "Roberto Gálvez", telefono: "+502 5590 1123", correo: "roberto.galvez@outlook.com", canal: "facebook", mascotas: [{ nombre: "Rocky", especie: "Perro", raza: "Pastor alemán", edad: "4 años", tamano: "Grande", contactos: [{ nombre: "Ana de Gálvez", telefono: "+502 5590 7781", relacion: "Esposa de Roberto", desde: "2 ago 2026" }] }, { nombre: "Luna", especie: "Perro", raza: "Pastor alemán", edad: "4 años", tamano: "Grande", contactos: [{ nombre: "Ana de Gálvez", telefono: "+502 5590 7781", relacion: "Esposa de Roberto", desde: "2 ago 2026" }] }, { nombre: "Thor", especie: "Perro", raza: "Husky", edad: "2 años", tamano: "Grande" }], ultimaGrooming: "2 ago 2026" },
   { id: "c5", nombre: "Sofía Herrera", telefono: "+502 4789 2210", correo: "sofia.herrera@gmail.com", canal: "whatsapp", mascotas: [{ nombre: "Mishi", especie: "Gato", raza: "Siamés", edad: "6 años" }], ultimaClinica: "18 sep 2026" },
   { id: "c6", nombre: "Daniel Ortiz", telefono: "+502 5023 4471", correo: "daniel.ortiz@hotmail.com", canal: "whatsapp", mascotas: [{ nombre: "Bruno", especie: "Perro", raza: "Bulldog francés", edad: "3 años", tamano: "Pequeño" }], ultimaClinica: "3 oct 2026" },
   { id: "c7", nombre: "Gabriela Rivas", telefono: "+502 3345 8890", correo: "gabriela.rivas@yahoo.com", canal: "whatsapp", mascotas: [{ nombre: "Lola", especie: "Perro", raza: "Poodle", edad: "7 años", tamano: "Pequeño" }], ultimaGrooming: "28 may 2026" },
@@ -129,6 +129,21 @@ export const CONVERSACIONES: Conversacion[] = [
       { id: "m2", autor: "ia", texto: "¡Hola Roberto! Con gusto te ayudo con el baño de los 3. Sobre un precio especial por los 3, eso lo autoriza directamente la clínica: te comunico con Andrea para que te confirme.", hora: "10:16" },
       { id: "m3", autor: "sistema", texto: "Transferida a secretaria · Motivo: excepción de precio (descuento por 3 mascotas).", hora: "10:17" },
       { id: "m4", autor: "cliente", texto: "Va, gracias", hora: "10:18" },
+    ],
+  },
+  {
+    id: "v30", objetivo: "agendar", resultado: { tipo: "cita", texto: "Grooming · pasado mañana 10:00" }, clienteId: "c1", canal: "whatsapp", agenda: "grooming", estado: "ia", noLeidos: 0, hora: "10:14",
+    contacto: { nombre: "Jorge Pérez", telefono: "+502 5598 1200", relacion: "Esposo de María José", mascota: "Max" },
+    mensajes: [
+      { id: "m1", autor: "cliente", texto: "Buenas, quiero agendar un baño para Max Pérez", hora: "10:09" },
+      { id: "m2", autor: "ia", texto: "¡Hola! Encontré a Max Pérez en nuestra base, pero este número no está registrado en su perfil. ¿Me dices tu nombre y tu relación con Max? Y para confirmar que es él: ¿de qué raza es?", hora: "10:09" },
+      { id: "m3", autor: "cliente", texto: "Soy Jorge, el esposo de María José. Es labrador", hora: "10:11" },
+      { id: "m4", autor: "sistema", texto: "Contacto secundario creado por Luna · Jorge Pérez (+502 5598 1200) · Esposo de María José · agregado al perfil de Max Pérez. Queda para revisión de recepción.", hora: "10:11" },
+      { id: "m5", autor: "ia", texto: "¡Gracias, Jorge! Ya te agregué como contacto de Max Pérez, así la próxima vez te reconozco directo. Para el baño de Max (grande) tengo espacio pasado mañana a las 10:00 o a las 12:00. ¿Cuál prefieres?", hora: "10:11" },
+      { id: "m6", autor: "cliente", texto: "10 está bien", hora: "10:13" },
+      { id: "m7", autor: "ia", texto: "Listo ✅ Max Pérez queda agendado para baño pasado mañana a las 10:00 con Luis. Le aviso también a María José por si quiere el recordatorio.", hora: "10:13" },
+      { id: "m8", autor: "sistema", texto: "Cita creada en Agenda Grooming (Google Calendar · grooming@patitasvet.gt).", hora: "10:13" },
+      { id: "m9", autor: "cliente", texto: "Perfecto, gracias", hora: "10:14" },
     ],
   },
   {
@@ -325,6 +340,7 @@ const HOY: Cita[] = [
   { id: "x6", agenda: "grooming", clienteId: "c11", mascota: "Peluche", servicio: "Baño y corte (pequeño)", dia: 4, hora: "11:00", duracionMin: 90, estado: "confirmada", origen: "ia" },
   { id: "x7", agenda: "clinica", clienteId: "c6", mascota: "Bruno", servicio: "Control post consulta", dia: -4, hora: "09:00", duracionMin: 20, estado: "cancelada", origen: "manual" },
   { id: "x8", agenda: "clinica", clienteId: "c19", mascota: "Rocco", servicio: "Vacuna múltiple", dia: 1, hora: "16:30", duracionMin: 20, estado: "confirmada", origen: "ia" },
+  { id: "x10", agenda: "grooming", clienteId: "c1", mascota: "Max", servicio: "Baño (grande)", dia: 2, hora: "10:00", duracionMin: 120, estado: "confirmada", origen: "ia" },
   { id: "x9", agenda: "grooming", clienteId: "c2", mascota: "Bimba", servicio: "Baño (mediano)", dia: 3, hora: "10:00", duracionMin: 120, estado: "confirmada", origen: "ia" },
 ];
 
@@ -744,3 +760,14 @@ export const CAMPANAS: Campana[] = [
     botones: ["Agendar cita", "Ahora no", "No recibir más"],
   },
 ];
+
+/** Apellido del dueño (última palabra del nombre). */
+export function apellido(c: Cliente): string {
+  const partes = c.nombre.replace(/^(Dr\.|Dra\.)\s*/, "").trim().split(/\s+/);
+  return partes[partes.length - 1];
+}
+
+/** La mascota lleva el apellido del dueño: "Max Pérez". */
+export function nombreMascota(nombre: string, c: Cliente): string {
+  return `${nombre} ${apellido(c)}`;
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CalendarPlus, ChevronDown, ClipboardPen, Download, Eye, Mail, NotebookPen, Pill, Plus, ShieldCheck, Trash2, X, type LucideIcon } from "lucide-react";
+import { CalendarPlus, ChevronDown, ClipboardPen, Download, Eye, Mail, NotebookPen, Pill, Plus, ShieldCheck, Trash2, UserPlus, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { espaciosLibres, horario } from "@/lib/agenda";
 import { AGENDA_INFO, etiquetaDia, fechaDe, fechaLegible, iso } from "@/lib/format";
@@ -512,6 +512,46 @@ export function RecetaModal({ c, onClose, onEnviada }: { c: Cliente; onClose: ()
         </div>
         <button type="button" onClick={onClose} className="mt-2 w-full rounded-lg py-1.5 text-[12.5px] font-semibold text-[var(--text-3)] hover:bg-surface">
           Cancelar
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/** Agrega a mano un contacto secundario a una mascota. */
+export function ContactoModal({ c, mascota, onClose }: { c: Cliente; mascota: string; onClose: () => void }) {
+  const { agregarContacto } = useStore();
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("+502 ");
+  const [relacion, setRelacion] = useState("");
+  const listo = nombre.trim() && telefono.replace(/\D/g, "").length >= 8 && relacion.trim();
+  const campo = "w-full rounded-lg border border-line bg-surface px-3 py-2 text-[13px] outline-none focus:border-brand";
+  const guardar = () => {
+    if (!listo) return;
+    agregarContacto(c.id, mascota, { nombre: nombre.trim(), telefono: telefono.trim(), relacion: relacion.trim(), desde: "Hoy" });
+    onClose();
+  };
+  return (
+    <Modal titulo={`Contacto de ${mascota} ${c.nombre.trim().split(/\s+/).pop()}`} Icon={UserPlus} onClose={onClose}>
+      <div className="space-y-3">
+        <Etiqueta texto="Nombre *">
+          <input autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Ana de Gálvez" className={campo} />
+        </Etiqueta>
+        <Etiqueta texto="Teléfono (WhatsApp) *">
+          <input value={telefono} onChange={(e) => setTelefono(e.target.value)} inputMode="tel" className={campo} />
+        </Etiqueta>
+        <Etiqueta texto="Relación *">
+          <input value={relacion} onChange={(e) => setRelacion(e.target.value)} placeholder={`Ej. Esposa de ${c.nombre.split(" ")[0]}`} className={campo} />
+        </Etiqueta>
+        <p className="flex items-start gap-1.5 rounded-lg bg-surface px-3 py-2 text-[11.5px] text-[var(--text-3)]">
+          <ShieldCheck size={13} className="mt-0.5 shrink-0" />
+          Cuando escriba desde este número, Luna lo reconoce como contacto de {mascota} y puede agendar sus citas. El dueño sigue siendo {c.nombre}.
+        </p>
+      </div>
+      <div className="mt-4 flex justify-end gap-2">
+        <button type="button" onClick={onClose} className="rounded-lg border border-line px-3 py-1.5 text-[13px] font-semibold hover:bg-surface">Cancelar</button>
+        <button type="button" onClick={guardar} disabled={!listo} className="rounded-lg bg-brand px-3 py-1.5 text-[13px] font-bold text-white hover:bg-brand-dark disabled:opacity-40">
+          Agregar contacto
         </button>
       </div>
     </Modal>

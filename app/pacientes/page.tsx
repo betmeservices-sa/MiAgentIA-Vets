@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown, CheckCircle2, MessageCircle, Search, Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { etiquetaDia, fechaLegible, recetaEnCurso } from "@/lib/format";
-import { CITAS, CLIENTES } from "@/lib/seed";
+import { CITAS, CLIENTES, nombreMascota } from "@/lib/seed";
 import { useStore } from "@/lib/store";
 import type { Canal } from "@/lib/types";
 import { AgendaPill, Avatar, ChannelBadge } from "@/components/ui";
@@ -18,6 +18,8 @@ type Vista = "todos" | "confirmar" | "tratamiento" | "luna" | "revisar";
 type Orden = { col: "nombre" | "ultima" | "proxima"; asc: boolean };
 
 const sinEspacios = (t: string) => t.replace(/\s/g, "");
+// Minúsculas y sin tildes: "max perez" encuentra a "Max Pérez".
+const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export default function PacientesPage() {
   const router = useRouter();
@@ -62,7 +64,7 @@ export default function PacientesPage() {
     { id: "revisar", label: "Por revisar" },
   ];
 
-  const t = q.trim().toLowerCase();
+  const t = norm(q.trim());
   const lista = filas
     .filter((f) => enVista(f, vista))
     .filter((f) => canal === "todos" || f.c.canal === canal)
@@ -70,10 +72,15 @@ export default function PacientesPage() {
     .filter(
       ({ c }) =>
         !t ||
-        c.nombre.toLowerCase().includes(t) ||
-        c.correo.toLowerCase().includes(t) ||
+        norm(c.nombre).includes(t) ||
+        norm(c.correo).includes(t) ||
         sinEspacios(c.telefono).includes(sinEspacios(t)) ||
-        c.mascotas.some((m) => m.nombre.toLowerCase().includes(t) || m.raza.toLowerCase().includes(t)),
+        c.mascotas.some(
+          (m) =>
+            norm(nombreMascota(m.nombre, c)).includes(t) ||
+            norm(m.raza).includes(t) ||
+            (m.contactos ?? []).some((k) => norm(k.nombre).includes(t) || sinEspacios(k.telefono).includes(sinEspacios(t))),
+        ),
     )
     .sort((a, b) => {
       const s = orden.asc ? 1 : -1;
@@ -120,7 +127,7 @@ export default function PacientesPage() {
           <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">
             <div className="flex min-w-[220px] flex-1 items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1.5 sm:max-w-xs">
               <Search size={14} className="text-[var(--text-3)]" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar dueño, mascota, raza, teléfono o correo" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar dueño, mascota (ej. Max Pérez), contacto, teléfono o correo" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none" />
             </div>
             <Filtro label="Canal" value={canal} onChange={(v) => setCanal(v as typeof canal)} opciones={[["todos", "Todos"], ["whatsapp", "WhatsApp"], ["instagram", "Instagram"], ["facebook", "Facebook"]]} />
             <Filtro label="Especie" value={especie} onChange={(v) => setEspecie(v as typeof especie)} opciones={[["todas", "Todas"], ["Perro", "Perro"], ["Gato", "Gato"]]} />
@@ -165,7 +172,7 @@ export default function PacientesPage() {
                     <td className="px-3 py-2.5">
                       {c.mascotas.map((m) => (
                         <p key={m.nombre} className="whitespace-nowrap">
-                          <b>{m.nombre}</b> <span className="text-[var(--text-3)]">· {m.raza} · {m.edad}</span>
+                          <b>{nombreMascota(m.nombre, c)}</b> <span className="text-[var(--text-3)]">· {m.raza} · {m.edad}</span>
                         </p>
                       ))}
                     </td>

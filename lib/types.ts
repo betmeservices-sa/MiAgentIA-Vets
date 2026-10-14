@@ -9,6 +9,20 @@ export interface Mascota {
   tamano?: "Pequeño" | "Mediano" | "Grande";
   /** La registró el agente en la conversación (no venía en la base de la clínica). */
   creadaPorIA?: boolean;
+  /** Otras personas que pueden escribir o traer a la mascota (esposa, hijo…). */
+  contactos?: ContactoSecundario[];
+}
+
+/** Persona distinta del dueño que la clínica reconoce para una mascota. */
+export interface ContactoSecundario {
+  nombre: string;
+  telefono: string;
+  /** Relación con el dueño o la mascota: "Esposo de María José", "Hijo"… */
+  relacion: string;
+  /** Lo agregó Luna en una conversación. */
+  creadoPorIA?: boolean;
+  /** Cuándo se agregó (texto de demo). */
+  desde?: string;
 }
 
 export interface Cliente {
@@ -53,6 +67,8 @@ export type Objetivo = "agendar" | "reactivacion" | "recordatorio" | "seguimient
 
 export interface Conversacion {
   objetivo: Objetivo;
+  /** Escribe un contacto secundario de la mascota, no el dueño. */
+  contacto?: { nombre: string; telefono: string; relacion: string; mascota: string };
   /** Lo que logró el agente, si ya hay resultado (cita agendada, confirmada…). */
   resultado?: { tipo: "cita" | "confirmada" | "reagendada" | "sin_interes"; texto: string };
   id: string;

@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { CAMPANAS, CITAS, CONVERSACIONES, NOTAS, POSTS, RECETAS, RESUMENES, VISITAS, cliente } from "./seed";
-import type { Agenda, Campana, Cita, Conversacion, Mensaje, Nota, Post, Receta, ResumenConsulta, Visita } from "./types";
+import type { Agenda, Campana, Cita, ContactoSecundario, Conversacion, Mensaje, Nota, Post, Receta, ResumenConsulta, Visita } from "./types";
 
 /** Filtro global: todo, solo clínica o solo grooming. */
 export type FiltroAgenda = "todas" | Agenda;
@@ -54,6 +54,9 @@ interface Estado {
   agregarPost: (p: Post) => void;
   campanas: Campana[];
   agregarCampana: (c: Campana) => void;
+  /** Contactos secundarios de una mascota (los del perfil más los agregados). */
+  contactosDe: (clienteId: string, mascota: string) => ContactoSecundario[];
+  agregarContacto: (clienteId: string, mascota: string, c: ContactoSecundario) => void;
 }
 
 const Ctx = createContext<Estado | null>(null);
@@ -195,9 +198,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const agregarPost = useCallback((p: Post) => setPosts((ps) => [p, ...ps]), []);
   const agregarCampana = useCallback((c: Campana) => setCampanas((cs) => [c, ...cs]), []);
 
+  // Contactos secundarios agregados en esta sesión, por "cliente|mascota".
+  const [contactosExtra, setContactosExtra] = useState<Record<string, ContactoSecundario[]>>({});
+  const contactosDe = useCallback(
+    (clienteId: string, mascota: string) => [
+      ...(cliente(clienteId).mascotas.find((m) => m.nombre === mascota)?.contactos ?? []),
+      ...(contactosExtra[`${clienteId}|${mascota}`] ?? []),
+    ],
+    [contactosExtra],
+  );
+  const agregarContacto = useCallback((clienteId: string, mascota: string, c: ContactoSecundario) => {
+    const k = `${clienteId}|${mascota}`;
+    setContactosExtra((x) => ({ ...x, [k]: [...(x[k] ?? []), c] }));
+  }, []);
+
   const conversacionDe = useCallback(
     (clienteId: string) => {
-      const existente = conversaciones.find((c) => c.clienteId === clienteId);
+      // La del dueño: las de contactos secundarios son de otra persona.
+      const existente = conversaciones.find((c) => c.clienteId === clienteId && !c.contacto);
       if (existente) return existente.id;
       const id = `n-${clienteId}`;
       const cli = cliente(clienteId);
@@ -222,7 +240,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ filtro, setFiltro, conversaciones, tomar, devolverAIA, resolver, enviar, marcarLeida, urgencias, agendarUrgencia, cerrarUrgencia, recetas, agregarReceta, calendario, setCalendario, diaCalendario, setDiaCalendario, convSel, setConvSel, conversacionDe, visitas, resumenes, guardarResumen, notas, agregarNota, agregarCita, citasVersion, posts, agregarPost, campanas, agregarCampana }}
+      value={{ filtro, setFiltro, conversaciones, tomar, devolverAIA, resolver, enviar, marcarLeida, urgencias, agendarUrgencia, cerrarUrgencia, recetas, agregarReceta, calendario, setCalendario, diaCalendario, setDiaCalendario, convSel, setConvSel, conversacionDe, visitas, resumenes, guardarResumen, notas, agregarNota, agregarCita, citasVersion, posts, agregarPost, campanas, agregarCampana, contactosDe, agregarContacto }}
     >
       {children}
     </Ctx.Provider>

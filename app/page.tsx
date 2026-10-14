@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, BellRing, Bot, CalendarCheck, CalendarPlus, CheckCheck, Info, Moon, PawPrint, Phone, Pill, RotateCcw, Send, ShieldCheck, Sparkles, Stethoscope, UserRound, UserRoundSearch } from "lucide-react";
+import { AlertTriangle, BellRing, Bot, CalendarCheck, CalendarPlus, CheckCheck, Info, Moon, PawPrint, Phone, Pill, RotateCcw, Send, ShieldCheck, Sparkles, Stethoscope, UserPlus, UserRound, UserRoundSearch } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { AGENDA_INFO, etiquetaDia, MOTIVO } from "@/lib/format";
-import { CITAS, cliente, STAFF } from "@/lib/seed";
+import { CITAS, cliente, nombreMascota, STAFF } from "@/lib/seed";
 import { pasaFiltro, useStore } from "@/lib/store";
 import type { Canal, Conversacion, Objetivo } from "@/lib/types";
 import { AgendaPill, Avatar, ChannelBadge, EstadoCitaPill, FiltroAgendaToggle } from "@/components/ui";
@@ -196,18 +196,20 @@ export default function BandejaPage() {
 
 function Item({ c, activa, onClick }: { c: Conversacion; activa: boolean; onClick: () => void }) {
   const cli = cliente(c.clienteId);
+  // Puede escribir el dueño o un contacto secundario de la mascota.
+  const quien = c.contacto?.nombre ?? cli.nombre;
   const ultimo = [...c.mensajes].reverse().find((m) => m.autor !== "sistema");
   return (
     <button type="button" onClick={onClick} className={cn("flex w-full gap-3 border-b border-line/70 px-3.5 py-3 text-left transition", activa ? "bg-brand/5" : "hover:bg-surface")}>
       <div className="relative">
-        <Avatar nombre={cli.nombre} size={42} color={c.agenda ? AGENDA_INFO[c.agenda].color : "#64748b"} />
+        <Avatar nombre={quien} size={42} color={c.agenda ? AGENDA_INFO[c.agenda].color : "#64748b"} />
         <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-card p-0.5">
           <ChannelBadge canal={c.canal} />
         </span>
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-semibold">{cli.nombre}</p>
+          <p className="truncate text-sm font-semibold">{quien}</p>
           <span className="shrink-0 text-[11px] text-[var(--text-3)]">{c.hora}</span>
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">
@@ -221,6 +223,11 @@ function Item({ c, activa, onClick }: { c: Conversacion; activa: boolean; onClic
           </span>
           {c.agenda && <AgendaPill agenda={c.agenda} />}
           <ObjetivoTag c={c} />
+          {c.contacto && (
+            <span className="inline-flex items-center gap-0.5 rounded-md bg-violet-50 px-1.5 py-0.5 text-[10.5px] font-semibold text-violet-700" title={c.contacto.relacion}>
+              <UserPlus size={10} /> Contacto de {nombreMascota(c.contacto.mascota, cli)}
+            </span>
+          )}
           {c.estado === "transferida" && c.motivo ? (
             <span className={cn("rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold", MOTIVO[c.motivo].className)}>
               {MOTIVO[c.motivo].label} · {c.esperaMin} min
@@ -273,7 +280,12 @@ function Hilo({ c }: { c: Conversacion }) {
     <div className="flex min-w-0 flex-1 flex-col bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-card px-4 py-2.5">
         <div className="flex min-w-0 items-center gap-2.5">
-          <p className="truncate font-bold">{cli.nombre}</p>
+          <p className="truncate font-bold">{c.contacto?.nombre ?? cli.nombre}</p>
+          {c.contacto && (
+            <span className="inline-flex items-center gap-0.5 rounded-md bg-violet-50 px-1.5 py-0.5 text-[10.5px] font-semibold text-violet-700" title={c.contacto.relacion}>
+              <UserPlus size={10} /> Contacto de {nombreMascota(c.contacto.mascota, cli)}
+            </span>
+          )}
           <ChannelBadge canal={c.canal} label />
           {c.agenda && <AgendaPill agenda={c.agenda} />}
           <ObjetivoTag c={c} />
@@ -357,7 +369,7 @@ function Hilo({ c }: { c: Conversacion }) {
           <input
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            placeholder={`Responder a ${cli.nombre.split(" ")[0]} por ${c.canal === "whatsapp" ? "WhatsApp" : c.canal === "instagram" ? "Instagram" : "Facebook"}…`}
+            placeholder={`Responder a ${(c.contacto?.nombre ?? cli.nombre).split(" ")[0]} por ${c.canal === "whatsapp" ? "WhatsApp" : c.canal === "instagram" ? "Instagram" : "Facebook"}…`}
             className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-brand"
           />
           <button type="submit" className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white hover:bg-brand-dark" aria-label="Enviar">
@@ -371,9 +383,20 @@ function Hilo({ c }: { c: Conversacion }) {
 
 function Ficha({ c }: { c: Conversacion }) {
   const cli = cliente(c.clienteId);
+  const { contactosDe } = useStore();
   const citas = CITAS.filter((x) => x.clienteId === cli.id).sort((a, b) => b.dia - a.dia).slice(0, 6);
   return (
     <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-l border-line bg-card p-4 xl:block">
+      {c.contacto && (
+        <div className="mb-4 rounded-xl border border-violet-200 bg-violet-50 p-3 text-[12.5px]">
+          <p className="flex items-center gap-1.5 font-bold text-violet-800">
+            <UserPlus size={14} /> Escribe un contacto secundario
+          </p>
+          <p className="mt-1 font-semibold text-[var(--text)]">{c.contacto.nombre}</p>
+          <p className="text-[var(--text-2)]">{c.contacto.relacion} · {c.contacto.telefono}</p>
+          <p className="mt-1 text-[11.5px] text-violet-700">Luna lo agregó al perfil de {nombreMascota(c.contacto.mascota, cli)}. Abajo, el dueño registrado.</p>
+        </div>
+      )}
       <div className="flex flex-col items-center text-center">
         <Avatar nombre={cli.nombre} size={56} />
         <p className="mt-2 font-bold">{cli.nombre}</p>
@@ -399,10 +422,15 @@ function Ficha({ c }: { c: Conversacion }) {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface text-[var(--text-2)]"><PawPrint size={16} /></span>
             <div className="text-[12.5px] leading-tight">
               <p className="flex items-center gap-1.5 font-bold">
-                {m.nombre}
+                {nombreMascota(m.nombre, cli)}
                 {m.creadaPorIA && <span className="rounded bg-violet-50 px-1 text-[9.5px] font-semibold text-violet-700">Nueva · Luna</span>}
               </p>
               <p className="text-[var(--text-3)]">{m.especie} · {m.raza} · {m.edad}{m.tamano ? ` · ${m.tamano}` : ""}</p>
+              {contactosDe(cli.id, m.nombre).map((k) => (
+                <p key={k.telefono} className="mt-1 flex items-center gap-1 text-[11.5px] text-violet-700">
+                  <UserPlus size={11} /> {k.nombre} · {k.relacion}
+                </p>
+              ))}
             </div>
           </div>
         ))}

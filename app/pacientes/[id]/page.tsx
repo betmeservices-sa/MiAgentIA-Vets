@@ -21,16 +21,18 @@ import {
   Plus,
   Scissors,
   Search,
+  Sparkles,
   Stethoscope,
+  UserPlus,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { AGENDA_INFO, etiquetaDia, fechaLegible, isoDeTexto, mesLegible, recetaEnCurso } from "@/lib/format";
-import { CITAS, CLIENTES, STAFF } from "@/lib/seed";
+import { CITAS, CLIENTES, nombreMascota, STAFF } from "@/lib/seed";
 import { useStore } from "@/lib/store";
 import type { Agenda, Cita, Cliente, Conversacion, Nota, Receta, Visita } from "@/lib/types";
 import { AgendaPill, Avatar, ChannelBadge, EstadoCitaPill } from "@/components/ui";
-import { Menu, NotaModal, RecetaModal, ResumenBloque, ResumenModal } from "@/components/ResumenConsulta";
+import { ContactoModal, Menu, NotaModal, RecetaModal, ResumenBloque, ResumenModal } from "@/components/ResumenConsulta";
 import { descargarReceta, nombreArchivo } from "@/lib/recetaPdf";
 
 // Ficha del paciente al estilo CRM: datos del dueño a la izquierda, actividad
@@ -50,7 +52,7 @@ export default function PacientePage() {
   return <Ficha key={c.id} c={c} />;
 }
 
-type Modal = { tipo: "resumen"; visita?: Visita } | { tipo: "nota" } | { tipo: "receta" } | null;
+type Modal = { tipo: "resumen"; visita?: Visita } | { tipo: "nota" } | { tipo: "receta" } | { tipo: "contacto"; mascota: string } | null;
 
 function Ficha({ c }: { c: Cliente }) {
   const router = useRouter();
@@ -89,7 +91,7 @@ function Ficha({ c }: { c: Cliente }) {
           <Centro c={c} tab={tab} setTab={setTab} visitas={suyas} acciones={acciones} />
         </div>
         <div className="space-y-4 lg:col-start-1 2xl:col-start-3 2xl:row-start-1">
-          <Mascotas c={c} visitas={suyas} />
+          <Mascotas c={c} visitas={suyas} agregar={(mascota) => setModal({ tipo: "contacto", mascota })} />
           <ProximasCitas c={c} />
           <ConversacionCard conv={conv} abrir={abrirConversacion} />
         </div>
@@ -125,6 +127,7 @@ function Ficha({ c }: { c: Cliente }) {
         </div>
       )}
       {modal?.tipo === "nota" && <NotaModal c={c} onClose={() => setModal(null)} />}
+      {modal?.tipo === "contacto" && <ContactoModal c={c} mascota={modal.mascota} onClose={() => setModal(null)} />}
       {modal?.tipo === "receta" && (
         <RecetaModal
           c={c}
@@ -184,7 +187,7 @@ function Contacto({ c, acciones }: { c: Cliente; acciones: Acciones }) {
           <Avatar nombre={c.nombre} size={48} />
           <div className="min-w-0">
             <h1 className="text-[19px] font-extrabold leading-tight tracking-tight">{c.nombre}</h1>
-            <p className="mt-0.5 text-[12.5px] text-[var(--text-3)]">Dueño de {c.mascotas.map((m) => m.nombre).join(", ")}</p>
+            <p className="mt-0.5 text-[12.5px] text-[var(--text-3)]">Dueño de {c.mascotas.map((m) => nombreMascota(m.nombre, c)).join(", ")}</p>
           </div>
         </div>
         <div className="mt-3 space-y-1 text-[13px]">
@@ -888,7 +891,8 @@ function Lateral({ titulo, accion, children }: { titulo: string; accion?: ReactN
   );
 }
 
-function Mascotas({ c, visitas }: { c: Cliente; visitas: Visita[] }) {
+function Mascotas({ c, visitas, agregar }: { c: Cliente; visitas: Visita[]; agregar: (mascota: string) => void }) {
+  const { contactosDe } = useStore();
   const ultima = (m: string, a: Agenda) =>
     visitas.filter((v) => v.mascota === m && v.agenda === a).sort((x, y) => y.fecha.localeCompare(x.fecha))[0];
   return (
@@ -901,7 +905,7 @@ function Mascotas({ c, visitas }: { c: Cliente; visitas: Visita[] }) {
             <div key={m.nombre} className="rounded-xl border border-line p-3">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface text-[var(--text-2)]"><PawPrint size={16} /></span>
-                <p className="font-bold">{m.nombre}</p>
+                <p className="font-bold">{nombreMascota(m.nombre, c)}</p>
                 <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-300/60">{m.especie}</span>
                 {m.creadaPorIA && <span className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[10.5px] font-semibold text-violet-700">Nueva · Luna</span>}
               </div>
@@ -912,6 +916,34 @@ function Mascotas({ c, visitas }: { c: Cliente; visitas: Visita[] }) {
                 <dt className="text-[var(--text-3)]">Última clínica</dt><dd className="font-medium">{uc ? fechaLegible(uc.fecha) : "—"}</dd>
                 <dt className="text-[var(--text-3)]">Último grooming</dt><dd className="font-medium">{ug ? fechaLegible(ug.fecha) : "—"}</dd>
               </dl>
+              <div className="mt-3 border-t border-line pt-2.5">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-3)]">Contactos secundarios</p>
+                  <button type="button" onClick={() => agregar(m.nombre)} className="inline-flex items-center gap-0.5 text-[12px] font-semibold text-brand hover:underline">
+                    <Plus size={13} /> Agregar
+                  </button>
+                </div>
+                {contactosDe(c.id, m.nombre).length === 0 ? (
+                  <p className="mt-1 text-[12px] text-[var(--text-3)]">Solo el dueño. Si escribe otra persona por {nombreMascota(m.nombre, c)}, Luna la agrega aquí.</p>
+                ) : (
+                  <div className="mt-1.5 space-y-1.5">
+                    {contactosDe(c.id, m.nombre).map((k) => (
+                      <div key={k.telefono} className="rounded-lg bg-surface px-2.5 py-1.5 text-[12.5px]">
+                        <p className="flex flex-wrap items-center gap-1.5 font-semibold">
+                          <UserPlus size={13} className="text-[var(--text-3)]" /> {k.nombre}
+                          {k.creadoPorIA && (
+                            <span className="inline-flex items-center gap-0.5 rounded bg-violet-100 px-1 text-[10px] font-semibold text-violet-700">
+                              <Sparkles size={9} /> Creado por Luna
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-[var(--text-2)]">{k.relacion}</p>
+                        <p className="text-[var(--text-3)]">{k.telefono}{k.desde ? ` · desde ${k.desde.toLowerCase() === "hoy" ? "hoy" : k.desde}` : ""}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
