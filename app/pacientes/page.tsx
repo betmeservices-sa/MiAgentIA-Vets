@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, FileText, PawPrint, Search, Sparkles, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, FileText, MessageCircle, PawPrint, Search, Sparkles, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { CLIENTES } from "@/lib/seed";
 import { useStore } from "@/lib/store";
@@ -10,11 +11,16 @@ import { Avatar, Card, ChannelBadge, MetricCard, PageHeader } from "@/components
 
 type Filtro = "todos" | "nuevos";
 
-export default function ClientesPage() {
+export default function PacientesPage() {
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [q, setQ] = useState("");
   const [abierto, setAbierto] = useState<string | null>(null);
-  const { recetas } = useStore();
+  const { recetas, conversacionDe, setConvSel } = useStore();
+  const router = useRouter();
+  const abrirConversacion = (clienteId: string) => {
+    setConvSel(conversacionDe(clienteId));
+    router.push("/");
+  };
   const perfil = CLIENTES.find((c) => c.id === abierto);
   // Perfiles que recepción ya revisó (en el demo vive solo en esta pantalla).
   const [revisados, setRevisados] = useState<Set<string>>(new Set());
@@ -27,7 +33,7 @@ export default function ClientesPage() {
   const lista = useMemo(() => {
     const t = q.trim().toLowerCase();
     return CLIENTES.filter((c) => filtro === "todos" || c.creadoPorIA || c.mascotas.some((m) => m.creadaPorIA))
-      .filter((c) => !t || c.nombre.toLowerCase().includes(t) || c.telefono.includes(t) || c.mascotas.some((m) => m.nombre.toLowerCase().includes(t)))
+      .filter((c) => !t || c.nombre.toLowerCase().includes(t) || c.telefono.replace(/s/g, "").includes(t.replace(/s/g, "")) || c.correo.toLowerCase().includes(t) || c.mascotas.some((m) => m.nombre.toLowerCase().includes(t)))
       .sort((a, b) => Number(porRevisar(b.id)) - Number(porRevisar(a.id)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtro, q, revisados]);
@@ -38,10 +44,10 @@ export default function ClientesPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <PageHeader title="Clientes y mascotas" sub="Base de datos de la clínica. Cuando alguien no registrado escribe por WhatsApp, Luna crea el perfil en la conversación." />
+      <PageHeader title="Pacientes" sub="Dueños y mascotas de la clínica. Busca un paciente para ver su perfil, sus recetas o entrar a su conversación." />
       <div className="space-y-5 p-6">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <MetricCard Icon={Users} valor={CLIENTES.length} label="Clientes en la base" />
+          <MetricCard Icon={Users} valor={CLIENTES.length} label="Clientes registrados" />
           <MetricCard Icon={Sparkles} valor={nuevosClientes} label="Clientes creados por Luna (7 días)" />
           <MetricCard Icon={PawPrint} valor={nuevasMascotas} label="Mascotas registradas por Luna" />
           <MetricCard Icon={CheckCircle2} valor={pendientes} label="Perfiles por revisar" hint="Recepción confirma los datos" tono={pendientes ? "alerta" : undefined} />
@@ -50,12 +56,12 @@ export default function ClientesPage() {
         <div className={cn("grid gap-5", perfil && "xl:grid-cols-[minmax(0,1fr)_420px]")}>
         <Card
           title="Perfiles"
-          sub="Haz clic en un cliente para ver su perfil y sus recetas"
+          sub="Haz clic en un paciente para ver su perfil y su historial de recetas"
           action={
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2.5 py-1.5">
                 <Search size={14} className="text-[var(--text-3)]" />
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente, mascota o teléfono" className="w-56 bg-transparent text-[13px] outline-none" />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar dueño, mascota, teléfono o correo" className="w-64 bg-transparent text-[13px] outline-none" />
               </div>
               <div className="inline-flex rounded-lg border border-line p-0.5">
                 {(["todos", "nuevos"] as Filtro[]).map((f) => (
@@ -71,7 +77,7 @@ export default function ClientesPage() {
             <table className="w-full text-left text-[13px]">
               <thead className="text-[11px] uppercase tracking-wider text-[var(--text-3)]">
                 <tr>
-                  <th className="py-2 pr-3">Cliente</th>
+                  <th className="py-2 pr-3">Dueño</th>
                   <th className="py-2 pr-3">Mascotas (especie · raza · edad)</th>
                   <th className="py-2 pr-3">Canal</th>
                   <th className="py-2 pr-3">Recetas</th>
@@ -90,6 +96,7 @@ export default function ClientesPage() {
                           <div className="leading-tight">
                             <p className="font-semibold">{c.nombre}</p>
                             <p className="text-[12px] text-[var(--text-3)]">{c.telefono}</p>
+                            <p className="text-[12px] text-[var(--text-3)]">{c.correo}</p>
                           </div>
                         </div>
                       </td>
@@ -119,7 +126,11 @@ export default function ClientesPage() {
                           <span className="text-[var(--text-3)]">Base de la clínica</span>
                         )}
                       </td>
-                      <td className="py-2.5 text-right">
+                      <td className="py-2.5">
+                        <div className="flex flex-col items-end gap-1.5">
+                        <button onClick={(e) => { e.stopPropagation(); abrirConversacion(c.id); }} className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-brand/40 bg-brand/5 px-2 py-1 text-[11.5px] font-semibold text-brand hover:bg-brand/10">
+                          <MessageCircle size={12} /> Conversación
+                        </button>
                         {pend ? (
                           <button onClick={(e) => { e.stopPropagation(); setRevisados((s) => new Set(s).add(c.id)); }} className="inline-flex items-center gap-1 rounded-lg border border-violet-300 bg-white px-2 py-1 text-[11.5px] font-semibold text-violet-700 hover:bg-violet-50">
                             <CheckCircle2 size={12} /> Marcar revisado
@@ -127,6 +138,7 @@ export default function ClientesPage() {
                         ) : (c.creadoPorIA || c.mascotas.some((m) => m.creadaPorIA)) ? (
                           <span className="text-[11.5px] font-semibold text-emerald-700">Revisado</span>
                         ) : null}
+                        </div>
                       </td>
                     </tr>
                   );

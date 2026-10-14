@@ -20,7 +20,6 @@ const ESTADO: Record<EstadoSeguimiento, { label: string; className: string }> = 
 const CUANDO = ["24 horas", "3 días", "7 días", "14 días", "No enviar"];
 
 export default function SeguimientoPage() {
-  const { rol } = useStore();
   const [cuando, setCuando] = useState("3 días");
   const [tipo, setTipo] = useState("Preguntar evolución");
   const tot = { programados: 64 + 6, enviados: 64, respondidos: 41, citas: 17 };
@@ -60,7 +59,7 @@ export default function SeguimientoPage() {
           </Card>
 
           <div className="space-y-5">
-            {rol === "veterinario" && <a href="/receta" className="flex items-center gap-3 rounded-2xl border border-[var(--clinica)] bg-[var(--clinica-soft)] p-4 text-[13px] font-semibold text-[var(--clinica)] hover:opacity-90">
+            {<a href="/receta" className="flex items-center gap-3 rounded-2xl border border-[var(--clinica)] bg-[var(--clinica-soft)] p-4 text-[13px] font-semibold text-[var(--clinica)] hover:opacity-90">
               <Pill size={18} /> <span>Al terminar la consulta: escribe la <b>receta digital</b> y envíala en PDF por WhatsApp →</span>
             </a>}
             <Card title="Al cerrar la consulta" sub="Lo que ve el Dr. Méndez (demo)">

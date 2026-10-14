@@ -109,14 +109,13 @@ export function MetricCard({
 }
 
 export function FiltroAgendaToggle({ permitir = true }: { permitir?: boolean }) {
-  const { filtro, setFiltro, rol } = useStore();
+  const { filtro, setFiltro } = useStore();
   const opciones: { id: FiltroAgenda; label: string }[] = [
     { id: "todas", label: "Todo" },
     { id: "clinica", label: "Clínica" },
     { id: "grooming", label: "Grooming" },
   ];
-  // Veterinario y groomer ven solo su agenda: el filtro queda fijo.
-  const fijo = !permitir || rol !== "secretaria";
+  const fijo = !permitir;
   return (
     <div className="inline-flex rounded-xl border border-line bg-card p-1 shadow-sm">
       {opciones.map((o) => {

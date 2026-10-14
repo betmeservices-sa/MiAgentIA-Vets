@@ -38,8 +38,8 @@ const BANDEJA: Record<Agenda, { canal: { whatsapp: number; instagram: number; fa
 type Vista = "secretaria" | "veterinario";
 
 export default function DashboardPage() {
-  const { filtro, rol, conversaciones } = useStore();
-  const [vista, setVista] = useState<Vista>(rol === "veterinario" ? "veterinario" : "secretaria");
+  const { filtro, conversaciones } = useStore();
+  const [vista, setVista] = useState<Vista>("secretaria");
   const agendas = (["clinica", "grooming"] as Agenda[]).filter((a) => pasaFiltro(filtro, a));
 
   return (
@@ -65,7 +65,7 @@ export default function DashboardPage() {
         }
       />
       <div className="space-y-5 p-6">
-        {(vista === "veterinario" || rol === "veterinario") && agendas.includes("clinica") && <UrgenciasVet />}
+        {vista === "veterinario" && agendas.includes("clinica") && <UrgenciasVet />}
         <CitasDelDia agendas={agendas} />
         {vista === "secretaria" ? <VistaDia agendas={agendas} transferidas={conversaciones.filter((c) => c.estado === "transferida" && (c.agenda === null || agendas.includes(c.agenda)))} /> : <VistaSemana agendas={agendas} />}
         <p className="text-center text-[11.5px] text-[var(--text-3)]">Sin montos de dinero ni cálculos de retorno: el dashboard mide operación y atención.</p>

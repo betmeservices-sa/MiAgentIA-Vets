@@ -24,27 +24,6 @@ const input = "w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 tex
 const vacio = (): ItemReceta => ({ medicamento: "", dosis: "", frecuencia: "", duracion: "" });
 
 export default function RecetaPage() {
-  const { rol } = useStore();
-  if (rol !== "veterinario") return <SoloVeterinario />;
-  return <Receta />;
-}
-
-// La secretaria no escribe recetas: las consulta en el perfil del cliente.
-function SoloVeterinario() {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <PageHeader title="Receta digital" sub="Herramienta del veterinario" />
-      <div className="p-6">
-        <Card title="Solo el veterinario escribe y envía recetas">
-          <p className="text-[13px] text-[var(--text-2)]">Las recetas enviadas se pueden consultar en el perfil de cada cliente, en Clientes y mascotas.</p>
-          <Link href="/clientes" className="mt-3 inline-flex rounded-lg bg-brand px-3 py-1.5 text-[13px] font-bold text-white">Ir a Clientes y mascotas</Link>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-function Receta() {
   const { recetas, agregarReceta } = useStore();
   const pacientes = citasDe("clinica", 0);
   const [citaId, setCitaId] = useState(pacientes.find((c) => c.mascota === "Canela")?.id ?? pacientes[0]?.id);

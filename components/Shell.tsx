@@ -1,61 +1,49 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  BarChart3,
   BellRing,
-  BookOpen,
   CalendarDays,
-  ConciergeBell,
-  FileText,
+  ChevronDown,
   HeartPulse,
   Inbox,
-  Lock,
   LogOut,
   Menu,
-  MessageSquareText,
   PawPrint,
   Pill,
   Stethoscope,
+  UserRoundSearch,
   Users,
   X,
+  Zap,
   type LucideIcon,
-  UserRoundSearch,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { CLINICA, STAFF } from "@/lib/seed";
+import { AGENDA_INFO, etiquetaDia } from "@/lib/format";
+import { CITAS, CLINICA, cliente } from "@/lib/seed";
 import { StoreProvider, useStore } from "@/lib/store";
-import type { Rol } from "@/lib/types";
-import { Avatar } from "./ui";
+import type { Agenda } from "@/lib/types";
+import { AgendaPill, Avatar, EstadoCitaPill } from "./ui";
 
 interface NavItem {
   href: string;
   label: string;
   Icon: LucideIcon;
-  roles: Rol[];
 }
 
-const NAV: NavItem[] = [
-  { href: "/", label: "Bandeja", Icon: Inbox, roles: ["secretaria"] },
-  { href: "/clientes", label: "Clientes y mascotas", Icon: Users, roles: ["secretaria", "veterinario"] },
-  { href: "/hoy", label: "Hoy", Icon: ConciergeBell, roles: ["secretaria", "veterinario", "groomer"] },
-  { href: "/agendas", label: "Agendas", Icon: CalendarDays, roles: ["secretaria", "veterinario", "groomer"] },
-  { href: "/recordatorios", label: "Recordatorios", Icon: BellRing, roles: ["secretaria"] },
-  { href: "/seguimiento", label: "Seguimiento", Icon: Stethoscope, roles: ["secretaria", "veterinario"] },
-  { href: "/receta", label: "Receta digital", Icon: Pill, roles: ["veterinario"] },
-  { href: "/reactivacion", label: "Reactivación", Icon: UserRoundSearch, roles: ["secretaria"] },
-  { href: "/plantillas", label: "Plantillas WhatsApp", Icon: MessageSquareText, roles: ["secretaria"] },
-  { href: "/dashboard", label: "Dashboard", Icon: BarChart3, roles: ["secretaria", "veterinario"] },
-  { href: "/conocimiento", label: "Info aprobada", Icon: BookOpen, roles: ["secretaria", "veterinario"] },
-  { href: "/producto", label: "Documento de producto", Icon: FileText, roles: ["secretaria", "veterinario", "groomer"] },
+// Menú lateral: bandeja, acciones (agrupadas) y pacientes. Calendarios y
+// recordatorios viven en la barra de arriba.
+const ACCIONES: NavItem[] = [
+  { href: "/receta", label: "Receta", Icon: Pill },
+  { href: "/seguimiento", label: "Seguimiento", Icon: Stethoscope },
+  { href: "/reactivacion", label: "Reactivación", Icon: UserRoundSearch },
 ];
 
-const ROLES: { id: Rol; label: string }[] = [
-  { id: "secretaria", label: "Secretaria" },
-  { id: "veterinario", label: "Veterinario" },
-  { id: "groomer", label: "Groomer" },
+const CALENDARIOS: { id: Agenda; label: string }[] = [
+  { id: "clinica", label: "Veterinaria" },
+  { id: "grooming", label: "Grooming" },
 ];
 
 function activo(pathname: string, href: string) {
@@ -74,51 +62,164 @@ export function Shell({ children }: { children: ReactNode }) {
 
 function Layout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
-  const router = useRouter();
-  const { rol } = useStore();
-  const item = NAV.find((n) => activo(pathname, n.href));
-  const permitido = !item || item.roles.includes(rol);
-  // Fechas, horas libres y rol guardado dependen del navegador: se pinta
-  // después de montar para que el HTML del servidor no choque con el cliente.
+  // Fechas y horas libres dependen del navegador: se pinta después de montar
+  // para que el HTML del servidor no choque con el cliente.
   const [listo, setListo] = useState(false);
   useEffect(() => setListo(true), []);
-
-  useEffect(() => {
-    if (!permitido) router.replace("/hoy");
-  }, [permitido, router]);
 
   return (
     <div className="flex h-screen overflow-hidden">
       {open && <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setOpen(false)} aria-hidden />}
       <Sidebar open={open} onClose={() => setOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex items-center gap-3 border-b border-line bg-card px-4 py-2.5 lg:hidden">
-          <button type="button" onClick={() => setOpen(true)} aria-label="Abrir menú" className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-2)] hover:bg-surface">
-            <Menu size={22} />
-          </button>
-          <span className="text-sm font-extrabold tracking-tight">{CLINICA.nombre}</span>
-        </div>
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          {!listo ? null : permitido ? (
-            children
-          ) : (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-              <Lock size={26} className="text-[var(--text-3)]" />
-              <p className="font-bold">Sección restringida para este perfil</p>
-            </div>
-          )}
-        </main>
+        <TopBar onMenu={() => setOpen(true)} />
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{listo ? children : null}</main>
       </div>
+    </div>
+  );
+}
+
+function TopBar({ onMenu }: { onMenu: () => void }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { calendario, setCalendario } = useStore();
+  const enAgendas = pathname.startsWith("/agendas");
+
+  return (
+    <div className="relative z-30 grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-line bg-card px-3 py-2 sm:px-4">
+      <div className="flex min-w-0 items-center gap-2">
+        <button type="button" onClick={onMenu} aria-label="Abrir menú" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--text-2)] hover:bg-surface lg:hidden">
+          <Menu size={22} />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="hidden items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-3)] md:flex">
+          <CalendarDays size={14} /> Calendarios
+        </span>
+        <div className="inline-flex rounded-xl border border-line bg-surface p-1">
+          {CALENDARIOS.map((c) => {
+            const on = enAgendas && calendario === c.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  setCalendario(c.id);
+                  router.push("/agendas");
+                }}
+                className={cn("rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition sm:px-4", on ? "text-white shadow-sm" : "text-[var(--text-2)] hover:bg-card")}
+                style={on ? { backgroundColor: AGENDA_INFO[c.id].color } : undefined}
+                aria-pressed={on}
+              >
+                {c.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Recordatorios />
+      </div>
+    </div>
+  );
+}
+
+// Próximos recordatorios de cita (hoy, mañana y pasado) en un dropdown.
+function Recordatorios() {
+  const [abierto, setAbierto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const { conversacionDe, setConvSel } = useStore();
+
+  useEffect(() => {
+    if (!abierto) return;
+    const fuera = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setAbierto(false);
+    document.addEventListener("mousedown", fuera);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", fuera);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [abierto]);
+
+  const proximas = CITAS.filter((c) => c.dia >= 0 && c.dia <= 2 && c.estado !== "completada").sort((a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora));
+  const pendientes = proximas.filter((c) => c.estado === "por_confirmar").length;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setAbierto((a) => !a)}
+        aria-expanded={abierto}
+        className={cn(
+          "relative flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[12.5px] font-semibold transition",
+          abierto ? "border-brand/50 bg-brand/5 text-brand" : "border-line text-[var(--text-2)] hover:bg-surface",
+        )}
+      >
+        <BellRing size={16} />
+        <span className="hidden md:inline">Recordatorios</span>
+        <ChevronDown size={14} className={cn("hidden transition md:block", abierto && "rotate-180")} />
+        {pendientes > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10.5px] font-bold text-white" title={`${pendientes} por confirmar`}>
+            {pendientes}
+          </span>
+        )}
+      </button>
+      {abierto && (
+        <div className="absolute right-0 z-40 mt-2 w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-line bg-card shadow-xl">
+          <div className="border-b border-line px-4 py-3">
+            <p className="text-[14px] font-bold">Recordatorios de cita</p>
+            <p className="text-[12px] text-[var(--text-3)]">Hoy, mañana y pasado · {pendientes} por confirmar</p>
+          </div>
+          <div className="max-h-[60vh] divide-y divide-line overflow-y-auto">
+            {proximas.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  setConvSel(conversacionDe(c.clienteId));
+                  setAbierto(false);
+                  router.push("/");
+                }}
+                className="flex w-full items-start gap-3 px-4 py-2.5 text-left hover:bg-surface"
+                title="Abrir la conversación con el cliente"
+              >
+                <div className="w-[68px] shrink-0 text-[12px] leading-tight">
+                  <p className="font-bold">{etiquetaDia(c.dia)}</p>
+                  <p className="text-[var(--text-3)]">{c.hora}</p>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold">
+                    {c.mascota} <span className="font-normal text-[var(--text-3)]">· {cliente(c.clienteId).nombre}</span>
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <AgendaPill agenda={c.agenda} />
+                    <EstadoCitaPill estado={c.estado} />
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+          <Link href="/recordatorios" onClick={() => setAbierto(false)} className="block border-t border-line px-4 py-2.5 text-center text-[12.5px] font-semibold text-brand hover:bg-surface">
+            Ver todos los recordatorios
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
 
 function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
-  const { rol, setRol, conversaciones } = useStore();
-  const yo = STAFF[rol];
+  const { conversaciones } = useStore();
   const transferidas = conversaciones.filter((c) => c.estado === "transferida").length;
+  const enAcciones = ACCIONES.some((a) => activo(pathname, a.href));
+  const [accionesAbierto, setAccionesAbierto] = useState(true);
 
   return (
     <aside
@@ -150,58 +251,45 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
           </p>
           <span className="ml-auto h-2 w-2 rounded-full bg-emerald-500" />
         </div>
-        <div className="mt-3">
-          <p className="mb-1.5 px-1 text-[10.5px] font-bold uppercase tracking-wider text-[var(--text-3)]">Ver como</p>
-          <div className="grid grid-cols-3 gap-1 rounded-xl bg-surface p-1">
-            {ROLES.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setRol(r.id)}
-                className={cn(
-                  "rounded-lg px-1 py-1.5 text-[11.5px] font-semibold transition",
-                  rol === r.id ? "bg-card text-[var(--text)] shadow-sm" : "text-[var(--text-3)] hover:text-[var(--text)]",
-                )}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {NAV.filter((n) => n.roles.includes(rol)).map(({ href, label, Icon }) => {
-          const a = activo(pathname, href);
-          const aviso = href === "/" ? transferidas : 0;
-          return (
-            <Link
-              key={href}
-              href={href}
-              onClick={onClose}
-              className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
-                a ? "bg-brand text-white shadow-sm shadow-brand/25" : "text-[var(--text-2)] hover:bg-surface hover:text-[var(--text)]",
-              )}
-            >
-              <Icon size={18} strokeWidth={2.1} />
-              <span className="min-w-0 flex-1 truncate">{label}</span>
-              {aviso > 0 && (
-                <span className={cn("flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10.5px] font-bold", a ? "bg-white/25 text-white" : "bg-[#dc2626] text-white")}>
-                  {aviso}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+        <NavLink href="/" label="Bandeja" Icon={Inbox} activo={activo(pathname, "/")} aviso={transferidas} onClick={onClose} />
+
+        <button
+          type="button"
+          onClick={() => setAccionesAbierto((a) => !a)}
+          aria-expanded={accionesAbierto}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition",
+            enAcciones && !accionesAbierto
+              ? "bg-brand text-white shadow-sm shadow-brand/25"
+              : enAcciones
+                ? "text-[var(--text)] hover:bg-surface"
+                : "text-[var(--text-2)] hover:bg-surface hover:text-[var(--text)]",
+          )}
+        >
+          <Zap size={18} strokeWidth={2.1} />
+          <span className="min-w-0 flex-1 truncate text-left">Acciones</span>
+          <ChevronDown size={16} className={cn("transition", accionesAbierto && "rotate-180")} />
+        </button>
+        {accionesAbierto && (
+          <div className="ml-5 space-y-1 border-l border-line pl-2">
+            {ACCIONES.map((a) => (
+              <NavLink key={a.href} {...a} activo={activo(pathname, a.href)} onClick={onClose} compacto />
+            ))}
+          </div>
+        )}
+
+        <NavLink href="/pacientes" label="Pacientes" Icon={Users} activo={activo(pathname, "/pacientes")} onClick={onClose} />
       </nav>
 
       <div className="space-y-3 border-t border-line p-3">
         <div className="flex items-center gap-2.5 rounded-xl px-2 py-1.5">
-          <Avatar nombre={yo.nombre} color={yo.color} size={34} />
+          <Avatar nombre={CLINICA.corto} color="var(--brand-blue)" size={34} />
           <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-sm font-semibold">{yo.nombre}</p>
-            <p className="truncate text-[11px] text-[var(--text-3)]">{yo.cargo}</p>
+            <p className="truncate text-sm font-semibold">Usuario general</p>
+            <p className="truncate text-[11px] text-[var(--text-3)]">{CLINICA.nombre}</p>
           </div>
           <button
             type="button"
@@ -218,5 +306,35 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
         </div>
       </div>
     </aside>
+  );
+}
+
+function NavLink({
+  href,
+  label,
+  Icon,
+  activo: a,
+  aviso = 0,
+  onClick,
+  compacto,
+}: NavItem & { activo: boolean; aviso?: number; onClick: () => void; compacto?: boolean }) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 rounded-xl px-3 font-semibold transition",
+        compacto ? "py-2 text-[13px]" : "py-2.5 text-sm",
+        a ? "bg-brand text-white shadow-sm shadow-brand/25" : "text-[var(--text-2)] hover:bg-surface hover:text-[var(--text)]",
+      )}
+    >
+      <Icon size={compacto ? 16 : 18} strokeWidth={2.1} />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {aviso > 0 && (
+        <span className={cn("flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10.5px] font-bold", a ? "bg-white/25 text-white" : "bg-[#dc2626] text-white")}>
+          {aviso}
+        </span>
+      )}
+    </Link>
   );
 }

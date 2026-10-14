@@ -1,6 +1,5 @@
 export type Agenda = "clinica" | "grooming";
 export type Canal = "whatsapp" | "instagram" | "facebook";
-export type Rol = "secretaria" | "veterinario" | "groomer";
 
 export interface Mascota {
   nombre: string;
@@ -16,6 +15,7 @@ export interface Cliente {
   id: string;
   nombre: string;
   telefono: string;
+  correo: string;
   canal: Canal;
   mascotas: Mascota[];
   /** Fecha legible de la última visita a cada agenda (texto de demo). */

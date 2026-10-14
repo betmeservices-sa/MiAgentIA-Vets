@@ -5,27 +5,26 @@ import { AlertTriangle, CalendarCheck, Siren, CalendarClock, CalendarPlus, Clock
 import { cn } from "@/lib/cn";
 import { AGENDA_INFO, etiquetaDia, minutosDe, MOTIVO } from "@/lib/format";
 import { citasDe, proximosLibres } from "@/lib/agenda";
-import { CITAS, cliente, STAFF } from "@/lib/seed";
+import { CITAS, cliente } from "@/lib/seed";
 import { pasaFiltro, useStore } from "@/lib/store";
 import type { Agenda } from "@/lib/types";
 import { UrgenciasVet, useUrgencias } from "@/components/UrgenciasVet";
 import { AgendaPill, Card, EstadoCitaPill, FiltroAgendaToggle, MetricCard, PageHeader } from "@/components/ui";
 
 export default function HoyPage() {
-  const { filtro, conversaciones, rol } = useStore();
+  const { filtro, conversaciones } = useStore();
   const agendas = (["clinica", "grooming"] as Agenda[]).filter((a) => pasaFiltro(filtro, a));
   const hoy = agendas.flatMap((a) => citasDe(a, 0));
   const porConfirmar = CITAS.filter((c) => (c.dia === 0 || c.dia === 1) && c.estado === "por_confirmar" && pasaFiltro(filtro, c.agenda));
   const transferidas = conversaciones.filter((c) => c.estado === "transferida" && (c.agenda === null || pasaFiltro(filtro, c.agenda)));
-  const esSecretaria = rol === "secretaria";
   const urgencias = useUrgencias();
-  const verUrgencias = rol === "veterinario" && agendas.includes("clinica");
+  const verUrgencias = agendas.includes("clinica");
   const fecha = new Date().toLocaleDateString("es-GT", { weekday: "long", day: "numeric", month: "long" });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <PageHeader
-        title={rol === "secretaria" ? "Hoy en la clínica" : `Hola, ${STAFF[rol].nombre.split(" ").slice(0, 2).join(" ")}`}
+        title="Hoy en la clínica"
         sub={`Operación del día · ${fecha}`}
         right={<FiltroAgendaToggle />}
       />
@@ -41,9 +40,7 @@ export default function HoyPage() {
               hint={`${citasDe(a, 0).filter((c) => c.estado === "completada").length} atendidas · ${citasDe(a, 0).filter((c) => c.origen === "ia").length} agendadas por IA`}
             />
           ))}
-          {esSecretaria && (
-            <MetricCard Icon={AlertTriangle} valor={transferidas.length} label="Transferidas pendientes" hint="Esperan que la secretaria las tome" tono={transferidas.length ? "alerta" : undefined} />
-          )}
+          <MetricCard Icon={AlertTriangle} valor={transferidas.length} label="Transferidas pendientes" hint="Esperan que la secretaria las tome" tono={transferidas.length ? "alerta" : undefined} />
           <MetricCard Icon={CalendarClock} valor={porConfirmar.length} label="Citas por confirmar" hint="Hoy y mañana, sin respuesta al recordatorio" />
         </div>
 
@@ -70,7 +67,7 @@ export default function HoyPage() {
                             <p className="truncate text-[13.5px] font-semibold">
                               {u.mascota} <span className="font-normal text-[var(--text-3)]">· {u.nombre}</span>
                             </p>
-                            <p className="truncate text-[12px] text-rose-700">Urgencia marcada por Luna · {rol === "veterinario" ? "elige hora para recibirla" : "esperando que el veterinario le dé hora"}</p>
+                            <p className="truncate text-[12px] text-rose-700">Urgencia marcada por Luna · esperando que el veterinario le dé hora</p>
                           </div>
                           <span className="inline-flex items-center gap-1 rounded-full bg-rose-600 px-2 py-0.5 text-[11px] font-semibold text-white">
                             <Siren size={11} /> Urgencia
@@ -123,24 +120,22 @@ export default function HoyPage() {
           </div>
 
           <div className="space-y-5">
-            {esSecretaria && (
-              <Card title="Transferidas a ti" sub="Urgencias y casos clínicos primero" action={<Link href="/" className="text-[12.5px] font-semibold text-brand">Ir a bandeja</Link>}>
-                <div className="space-y-2">
-                  {transferidas.length === 0 && <p className="text-[13px] text-[var(--text-3)]">Nada pendiente. 🎉</p>}
-                  {transferidas.map((c) => (
-                    <Link key={c.id} href="/" className="block rounded-xl border border-line p-3 hover:bg-surface">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[13.5px] font-semibold">{cliente(c.clienteId).nombre}</p>
-                        <span className="flex items-center gap-1 text-[11.5px] text-[var(--text-3)]">
-                          <Clock size={11} /> {c.esperaMin} min
-                        </span>
-                      </div>
-                      {c.motivo && <span className={cn("mt-1.5 inline-block rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold", MOTIVO[c.motivo].className)}>{MOTIVO[c.motivo].label}</span>}
-                    </Link>
-                  ))}
-                </div>
-              </Card>
-            )}
+            <Card title="Transferidas a ti" sub="Urgencias y casos clínicos primero" action={<Link href="/" className="text-[12.5px] font-semibold text-brand">Ir a bandeja</Link>}>
+              <div className="space-y-2">
+                {transferidas.length === 0 && <p className="text-[13px] text-[var(--text-3)]">Nada pendiente. 🎉</p>}
+                {transferidas.map((c) => (
+                  <Link key={c.id} href="/" className="block rounded-xl border border-line p-3 hover:bg-surface">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[13.5px] font-semibold">{cliente(c.clienteId).nombre}</p>
+                      <span className="flex items-center gap-1 text-[11.5px] text-[var(--text-3)]">
+                        <Clock size={11} /> {c.esperaMin} min
+                      </span>
+                    </div>
+                    {c.motivo && <span className={cn("mt-1.5 inline-block rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold", MOTIVO[c.motivo].className)}>{MOTIVO[c.motivo].label}</span>}
+                  </Link>
+                ))}
+              </div>
+            </Card>
 
             <Card title="Por confirmar" sub="El recordatorio salió y no hay respuesta">
               <div className="space-y-2">
@@ -155,19 +150,17 @@ export default function HoyPage() {
                     <p className="text-[12px] text-[var(--text-3)]">
                       {etiquetaDia(c.dia)} {c.hora} · {c.servicio}
                     </p>
-                    {esSecretaria && (
-                      <div className="mt-2 flex gap-1.5">
-                        <button className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-[11.5px] font-semibold text-[var(--text-2)] hover:bg-surface">
-                          <Phone size={12} /> Llamar
-                        </button>
-                        <button className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-[11.5px] font-semibold text-[var(--text-2)] hover:bg-surface">
-                          <Send size={12} /> Reenviar
-                        </button>
-                        <button className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-[11.5px] font-semibold text-[var(--text-2)] hover:bg-surface">
-                          <CalendarCheck size={12} /> Confirmar
-                        </button>
-                      </div>
-                    )}
+                    <div className="mt-2 flex gap-1.5">
+                      <button className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-[11.5px] font-semibold text-[var(--text-2)] hover:bg-surface">
+                        <Phone size={12} /> Llamar
+                      </button>
+                      <button className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-[11.5px] font-semibold text-[var(--text-2)] hover:bg-surface">
+                        <Send size={12} /> Reenviar
+                      </button>
+                      <button className="inline-flex items-center gap-1 rounded-lg border border-line px-2 py-1 text-[11.5px] font-semibold text-[var(--text-2)] hover:bg-surface">
+                        <CalendarCheck size={12} /> Confirmar
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

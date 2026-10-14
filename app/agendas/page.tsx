@@ -7,7 +7,6 @@ import { AGENDA_INFO, diaCorto, minutosDe } from "@/lib/format";
 import { citasDe, horario, ocupacion } from "@/lib/agenda";
 import { CALENDARIOS, cliente } from "@/lib/seed";
 import { useStore } from "@/lib/store";
-import type { Agenda } from "@/lib/types";
 import { PageHeader } from "@/components/ui";
 
 const INI = 8 * 60;
@@ -15,10 +14,8 @@ const FIN = 18 * 60;
 const PX = 1.1; // px por minuto
 
 export default function AgendasPage() {
-  const { rol, filtro } = useStore();
-  const fija: Agenda | null = rol === "veterinario" ? "clinica" : rol === "groomer" ? "grooming" : null;
-  const [agendaSel, setAgendaSel] = useState<Agenda>(filtro === "grooming" ? "grooming" : "clinica");
-  const agenda = fija ?? agendaSel;
+  // El calendario se elige con los botones Veterinaria / Grooming de la barra de arriba.
+  const { calendario: agenda } = useStore();
   const [semana, setSemana] = useState(0);
 
   // Lunes de la semana actual como offset en días.
@@ -31,25 +28,8 @@ export default function AgendasPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <PageHeader
-        title="Agendas"
+        title={agenda === "clinica" ? "Calendario de veterinaria" : "Calendario de grooming"}
         sub="Dos calendarios de Google separados. El agente agenda cada cita en el que corresponde."
-        right={
-          !fija && (
-            <div className="inline-flex rounded-xl border border-line bg-card p-1 shadow-sm">
-              {(["clinica", "grooming"] as Agenda[]).map((a) => (
-                <button
-                  key={a}
-                  type="button"
-                  onClick={() => setAgendaSel(a)}
-                  className={cn("rounded-lg px-3.5 py-1.5 text-[13px] font-semibold", agenda === a ? "text-white" : "text-[var(--text-2)] hover:bg-surface")}
-                  style={agenda === a ? { backgroundColor: AGENDA_INFO[a].color } : undefined}
-                >
-                  {a === "clinica" ? "Clínica · Dr. Méndez" : "Grooming · Luis"}
-                </button>
-              ))}
-            </div>
-          )
-        }
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-card px-6 py-2.5">

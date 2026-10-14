@@ -47,10 +47,9 @@ const RESULTADO = {
 const CANALES: Canal[] = ["whatsapp", "instagram", "facebook"];
 
 export default function BandejaPage() {
-  const { conversaciones, filtro, marcarLeida } = useStore();
+  const { conversaciones, filtro, marcarLeida, convSel: sel, setConvSel: setSel } = useStore();
   const [tab, setTab] = useState<Tab>("todas");
   const [canales, setCanales] = useState<Canal[]>(CANALES);
-  const [sel, setSel] = useState<string>("v3");
 
   // Siempre queda al menos un canal marcado: con cero la bandeja se vería vacía sin razón.
   const alternarCanal = (c: Canal) =>
