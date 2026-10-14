@@ -1,86 +1,194 @@
 "use client";
 
-import { BellRing, CalendarCheck, CalendarX2, Repeat, UserX } from "lucide-react";
-import { AGENDA_INFO, etiquetaDia, pct } from "@/lib/format";
-import { CITAS, cliente } from "@/lib/seed";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { BellRing, CalendarCheck, CalendarClock, Check, MessageCircle, MessageCircleQuestion, Stethoscope, type LucideIcon } from "lucide-react";
+import { cn } from "@/lib/cn";
+import { diasDesde, etiquetaDia, isoDeTexto } from "@/lib/format";
+import { CITAS, cliente, nombreMascota } from "@/lib/seed";
 import { pasaFiltro, useStore } from "@/lib/store";
-import type { Agenda } from "@/lib/types";
-import { AgendaPill, Card, EstadoCitaPill, FiltroAgendaToggle, MetricCard, PageHeader } from "@/components/ui";
+import type { Agenda, EstadoCita } from "@/lib/types";
+import { AgendaPill, EstadoCitaPill, FiltroAgendaToggle, PageHeader } from "@/components/ui";
+
+// Recordatorios internos de la clínica: lo que el equipo tiene que hacer hoy,
+// mañana y pasado según el calendario. Sobre todo citas, más los pendientes
+// que salen de ellas (confirmar, controles que dejó el veterinario, dudas de
+// recetas).
+
+type Tipo = "cita" | "confirmar" | "control" | "receta";
+
+interface Pendiente {
+  id: string;
+  tipo: Tipo;
+  dia: number;
+  hora: string;
+  agenda: Agenda;
+  clienteId: string;
+  titulo: string;
+  detalle: string;
+  estado?: EstadoCita;
+}
+
+const TIPO: Record<Tipo, { label: string; Icon: LucideIcon; className: string }> = {
+  cita: { label: "Cita", Icon: CalendarCheck, className: "bg-surface text-[var(--text-2)]" },
+  confirmar: { label: "Confirmar", Icon: CalendarClock, className: "bg-amber-50 text-amber-700" },
+  control: { label: "Control", Icon: Stethoscope, className: "bg-[var(--clinica-soft)] text-[var(--clinica)]" },
+  receta: { label: "Receta", Icon: MessageCircleQuestion, className: "bg-rose-50 text-rose-700" },
+};
+
+const DIAS = [0, 1, 2];
+
+/** Qué hay que hacer con cada cita según su estado. */
+function queHacer(estado: EstadoCita, agenda: Agenda) {
+  if (estado === "por_confirmar") return "Sin confirmar: llama al cliente o reenvía el recordatorio.";
+  if (estado === "en_curso") return agenda === "grooming" ? "En curso: avisa al dueño cuando esté lista." : "En consulta.";
+  return agenda === "grooming" ? "Confirmada: ten listo el espacio de grooming." : "Confirmada: revisa el historial antes de la consulta.";
+}
 
 export default function RecordatoriosPage() {
-  const { filtro } = useStore();
-  const proximas = CITAS.filter((c) => c.dia >= 0 && c.dia <= 2 && pasaFiltro(filtro, c.agenda) && c.estado !== "completada").sort((a, b) => a.dia - b.dia || a.hora.localeCompare(b.hora));
-  const semana = CITAS.filter((c) => c.dia >= -6 && c.dia <= 0 && pasaFiltro(filtro, c.agenda));
-  const enviados = semana.length;
-  const confirmados = semana.filter((c) => c.estado === "completada" || c.estado === "confirmada").length;
-  const ausencias = semana.filter((c) => c.estado === "ausente").length;
-  const reagendados = semana.filter((c) => c.estado === "reagendada").length;
-  const cancelados = semana.filter((c) => c.estado === "cancelada").length;
+  const router = useRouter();
+  const { filtro, visitas, resumenes, recetas, conversacionDe, setConvSel, citasVersion } = useStore();
+  const [hechos, setHechos] = useState<Set<string>>(new Set());
+
+  const pendientes = useMemo(() => {
+    const out: Pendiente[] = [];
+    // Citas de hoy a pasado mañana.
+    for (const c of CITAS) {
+      if (c.dia < 0 || c.dia > 2 || ["completada", "cancelada", "reagendada"].includes(c.estado)) continue;
+      const cli = cliente(c.clienteId);
+      out.push({
+        id: `c-${c.id}`,
+        tipo: c.estado === "por_confirmar" ? "confirmar" : "cita",
+        dia: c.dia,
+        hora: c.hora,
+        agenda: c.agenda,
+        clienteId: c.clienteId,
+        titulo: `${c.servicio} · ${nombreMascota(c.mascota, cli)}`,
+        detalle: queHacer(c.estado, c.agenda),
+        estado: c.estado,
+      });
+    }
+    // Controles que dejó el veterinario en el resumen de consulta.
+    for (const v of visitas) {
+      const r = resumenes[v.id];
+      const n = Number(r?.proximoControl.match(/^En (\d+) días/)?.[1]);
+      if (!r || !n) continue;
+      const dia = n - diasDesde(v.fecha);
+      if (dia < 0 || dia > 2) continue;
+      const tieneCita = CITAS.some((c) => c.clienteId === v.clienteId && c.mascota === v.mascota && c.agenda === "clinica" && c.dia >= 0 && c.dia <= dia + 1);
+      if (tieneCita) continue;
+      const cli = cliente(v.clienteId);
+      out.push({
+        id: `k-${v.id}`,
+        tipo: "control",
+        dia,
+        hora: "",
+        agenda: "clinica",
+        clienteId: v.clienteId,
+        titulo: `Control de ${nombreMascota(v.mascota, cli)}`,
+        detalle: `${r.diagnostico}. El Dr. pidió control ${r.proximoControl.toLowerCase()} y aún no tiene cita: agéndalo.`,
+      });
+    }
+    // Clientes con dudas sobre su receta.
+    for (const r of recetas) {
+      if (r.estado !== "duda") continue;
+      const cli = cliente(r.clienteId);
+      out.push({
+        id: `r-${r.id}`,
+        tipo: "receta",
+        dia: Math.max(0, -diasDesde(isoDeTexto(r.fecha))),
+        hora: "",
+        agenda: "clinica",
+        clienteId: r.clienteId,
+        titulo: `Duda sobre la receta de ${nombreMascota(r.mascota, cli)}`,
+        detalle: "Luna no explica tratamientos: el veterinario o recepción debe responder.",
+      });
+    }
+    // Primero lo sin hora (tareas del día), luego por hora.
+    return out.filter((p) => pasaFiltro(filtro, p.agenda)).sort((a, b) => a.dia - b.dia || (a.hora || "00:00").localeCompare(b.hora || "00:00"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtro, visitas, resumenes, recetas, citasVersion]);
+
+  const alternar = (id: string) =>
+    setHechos((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const abrirChat = (clienteId: string) => {
+    setConvSel(conversacionDe(clienteId));
+    router.push("/");
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <PageHeader title="Recordatorios automáticos" sub="Plantilla recordatorio_cita · 24 h antes · botones Confirmar / Reagendar / Cancelar" right={<FiltroAgendaToggle />} />
-      <div className="space-y-5 p-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <MetricCard Icon={BellRing} valor={enviados} label="Enviados (7 días)" />
-          <MetricCard Icon={CalendarCheck} valor={`${pct(confirmados, enviados)}%`} label="Confirmados" hint={`${confirmados} citas`} />
-          <MetricCard Icon={Repeat} valor={reagendados} label="Reagendados por el cliente" />
-          <MetricCard Icon={CalendarX2} valor={cancelados} label="Cancelados" hint="El espacio se libera solo" />
-          <MetricCard Icon={UserX} valor={`${pct(ausencias, enviados)}%`} label="Ausencias" hint={`${ausencias} no se presentaron`} tono={ausencias > 3 ? "alerta" : undefined} />
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-3">
-          <Card className="lg:col-span-2" title="Cola de recordatorios" sub="Hoy, mañana y pasado mañana">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-[13px]">
-                <thead className="text-[11px] uppercase tracking-wider text-[var(--text-3)]">
-                  <tr>
-                    <th className="py-2 pr-3">Cita</th>
-                    <th className="py-2 pr-3">Mascota / cliente</th>
-                    <th className="py-2 pr-3">Agenda</th>
-                    <th className="py-2 pr-3">Recordatorio</th>
-                    <th className="py-2">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {proximas.map((c) => (
-                    <tr key={c.id}>
-                      <td className="py-2.5 pr-3 font-semibold whitespace-nowrap">
-                        {etiquetaDia(c.dia)} {c.hora}
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        <p className="font-semibold">{c.mascota}</p>
-                        <p className="text-[12px] text-[var(--text-3)]">{cliente(c.clienteId).nombre}</p>
-                      </td>
-                      <td className="py-2.5 pr-3"><AgendaPill agenda={c.agenda} /></td>
-                      <td className="py-2.5 pr-3 text-[12px] text-[var(--text-2)]">
-                        {c.dia === 2 ? "Sale mañana a esta hora" : c.estado === "por_confirmar" ? "Enviado · sin respuesta" : "Enviado · respondido"}
-                      </td>
-                      <td className="py-2.5"><EstadoCitaPill estado={c.estado} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          <Card title="Reglas configuradas" sub="Por agenda; la clínica las ajusta">
-            <div className="space-y-3 text-[13px]">
-              {(["clinica", "grooming"] as Agenda[]).filter((a) => pasaFiltro(filtro, a)).map((a) => (
-                <div key={a} className="rounded-xl border border-line p-3">
-                  <AgendaPill agenda={a} />
-                  <ul className="mt-2 space-y-1 text-[var(--text-2)]">
-                    <li>• Recordatorio 24 h antes, en horario 8:00–19:00.</li>
-                    <li>• Sin respuesta 4 h antes → pasa a «Por confirmar» para que llame la secretaria.</li>
-                    <li>• «Cancelar» libera el espacio en el calendario de {AGENDA_INFO[a].recurso}.</li>
-                    <li>• «Reagendar» → el agente ofrece espacios solo de esta agenda.</li>
-                    {a === "grooming" && <li>• Aviso «tu mascota está lista» cuando el groomer la marca como terminada.</li>}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
+      <PageHeader title="Recordatorios" sub="Pendientes de la clínica según el calendario: citas y lo que hay que hacer con ellas." right={<FiltroAgendaToggle />} />
+      <div className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
+        {DIAS.map((d) => {
+          const delDia = pendientes.filter((p) => p.dia === d);
+          const faltan = delDia.filter((p) => !hechos.has(p.id)).length;
+          return (
+            <section key={d}>
+              <div className="mb-2 flex items-baseline justify-between">
+                <h2 className="text-[16px] font-extrabold tracking-tight">
+                  {etiquetaDia(d)}
+                  {d > 1 && <span className="ml-1.5 text-[13px] font-semibold text-[var(--text-3)]">pasado mañana</span>}
+                </h2>
+                <span className="text-[12.5px] text-[var(--text-3)]">{faltan === 0 ? "Todo listo" : `${faltan} pendiente${faltan === 1 ? "" : "s"}`}</span>
+              </div>
+              {delDia.length === 0 && <p className="rounded-xl border border-dashed border-line p-4 text-center text-[13px] text-[var(--text-3)]">Nada agendado.</p>}
+              <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+                {delDia.map((p) => {
+                  const hecho = hechos.has(p.id);
+                  const t = TIPO[p.tipo];
+                  const cli = cliente(p.clienteId);
+                  return (
+                    <div key={p.id} className={cn("flex items-start gap-3 px-4 py-3", hecho && "bg-surface/60")}>
+                      <button
+                        type="button"
+                        onClick={() => alternar(p.id)}
+                        aria-pressed={hecho}
+                        aria-label={hecho ? "Marcar como pendiente" : "Marcar como hecho"}
+                        className={cn(
+                          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition",
+                          hecho ? "border-emerald-600 bg-emerald-600 text-white" : "border-[var(--border-2)] hover:border-emerald-600",
+                        )}
+                      >
+                        {hecho && <Check size={13} strokeWidth={3} />}
+                      </button>
+                      <span className="w-12 shrink-0 pt-0.5 text-[13px] font-bold tabular-nums">{p.hora || "—"}</span>
+                      <div className={cn("min-w-0 flex-1", hecho && "opacity-50")}>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] font-bold", t.className)}>
+                            <t.Icon size={11} /> {t.label}
+                          </span>
+                          <AgendaPill agenda={p.agenda} />
+                          {p.estado && p.tipo === "cita" && <EstadoCitaPill estado={p.estado} />}
+                        </div>
+                        <p className={cn("mt-1 text-[13.5px] font-semibold", hecho && "line-through")}>{p.titulo}</p>
+                        <p className="text-[12.5px] text-[var(--text-2)]">
+                          {cli.nombre} · {p.detalle}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => abrirChat(p.clienteId)}
+                        className="hidden shrink-0 items-center gap-1 rounded-lg border border-line px-2 py-1 text-[11.5px] font-semibold text-[var(--text-2)] hover:bg-surface sm:inline-flex"
+                        title="Abrir la conversación con el cliente"
+                      >
+                        <MessageCircle size={12} /> Chat
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+        <p className="flex items-center justify-center gap-1.5 text-center text-[11.5px] text-[var(--text-3)]">
+          <BellRing size={12} /> Los recordatorios que recibe el cliente los manda Luna 24 h antes de cada cita.
+        </p>
       </div>
     </div>
   );

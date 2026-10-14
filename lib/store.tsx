@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { CAMPANAS, CITAS, CONVERSACIONES, NOTAS, POSTS, RECETAS, RESUMENES, VISITAS, cliente } from "./seed";
-import type { Agenda, Campana, Cita, ContactoSecundario, Conversacion, Mensaje, Nota, Post, Receta, ResumenConsulta, Visita } from "./types";
+import { CAMPANAS, CITAS, CONVERSACIONES, MAX_PLANTILLAS, NOTAS, PLANTILLAS_WA, POSTS, RECETAS, RESUMENES, VISITAS, cliente } from "./seed";
+import type { Agenda, Campana, Cita, ContactoSecundario, Conversacion, Mensaje, Nota, PlantillaWA, Post, Receta, ResumenConsulta, Visita } from "./types";
 
 /** Filtro global: todo, solo clínica o solo grooming. */
 export type FiltroAgenda = "todas" | Agenda;
@@ -57,6 +57,10 @@ interface Estado {
   /** Contactos secundarios de una mascota (los del perfil más los agregados). */
   contactosDe: (clienteId: string, mascota: string) => ContactoSecundario[];
   agregarContacto: (clienteId: string, mascota: string, c: ContactoSecundario) => void;
+  plantillas: PlantillaWA[];
+  /** Crea o actualiza una plantilla. Devuelve false si ya hay el máximo guardado. */
+  guardarPlantilla: (p: PlantillaWA) => boolean;
+  eliminarPlantilla: (id: string) => void;
 }
 
 const Ctx = createContext<Estado | null>(null);
@@ -212,6 +216,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setContactosExtra((x) => ({ ...x, [k]: [...(x[k] ?? []), c] }));
   }, []);
 
+  // Plantillas de WhatsApp de la clínica (máximo MAX_PLANTILLAS).
+  const [plantillas, setPlantillas] = useState<PlantillaWA[]>(PLANTILLAS_WA);
+  const guardarPlantilla = useCallback(
+    (p: PlantillaWA) => {
+      const existe = plantillas.some((x) => x.id === p.id);
+      if (!existe && plantillas.length >= MAX_PLANTILLAS) return false;
+      setPlantillas((ps) => (existe ? ps.map((x) => (x.id === p.id ? p : x)) : [...ps, p]));
+      return true;
+    },
+    [plantillas],
+  );
+  const eliminarPlantilla = useCallback((id: string) => setPlantillas((ps) => ps.filter((x) => x.id !== id)), []);
+
   const conversacionDe = useCallback(
     (clienteId: string) => {
       // La del dueño: las de contactos secundarios son de otra persona.
@@ -240,7 +257,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ filtro, setFiltro, conversaciones, tomar, devolverAIA, resolver, enviar, marcarLeida, urgencias, agendarUrgencia, cerrarUrgencia, recetas, agregarReceta, calendario, setCalendario, diaCalendario, setDiaCalendario, convSel, setConvSel, conversacionDe, visitas, resumenes, guardarResumen, notas, agregarNota, agregarCita, citasVersion, posts, agregarPost, campanas, agregarCampana, contactosDe, agregarContacto }}
+      value={{ filtro, setFiltro, conversaciones, tomar, devolverAIA, resolver, enviar, marcarLeida, urgencias, agendarUrgencia, cerrarUrgencia, recetas, agregarReceta, calendario, setCalendario, diaCalendario, setDiaCalendario, convSel, setConvSel, conversacionDe, visitas, resumenes, guardarResumen, notas, agregarNota, agregarCita, citasVersion, posts, agregarPost, campanas, agregarCampana, contactosDe, agregarContacto, plantillas, guardarPlantilla, eliminarPlantilla }}
     >
       {children}
     </Ctx.Provider>

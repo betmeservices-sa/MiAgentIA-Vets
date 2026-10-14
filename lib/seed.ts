@@ -12,6 +12,7 @@ import type {
   Nota,
   Post,
   Campana,
+  PlantillaWA,
 } from "./types";
 import { fechaDe, iso, isoDeTexto } from "./format";
 
@@ -786,3 +787,29 @@ export function apellido(c: Cliente): string {
 export function nombreMascota(nombre: string, c: Cliente): string {
   return `${nombre} ${apellido(c)}`;
 }
+
+/** Límite de plantillas de WhatsApp que la clínica puede tener guardadas. */
+export const MAX_PLANTILLAS = 5;
+
+export const PLANTILLAS_WA: PlantillaWA[] = [
+  {
+    id: "w1", nombre: "recordatorio_cita", categoria: "UTILITY", estado: "Aprobada", actualizada: "2 oct 2026",
+    encabezado: "Recordatorio de cita",
+    cuerpo: "Hola {{1}}, te recordamos la cita de {{2}} para {{3}} el {{4}} a las {{5}} en Clínica Veterinaria Patitas. ¿Nos confirmas tu asistencia?",
+    ejemplos: ["Sofía", "Mishi", "control post consulta", "miércoles 7 de octubre", "11:00"],
+    pie: "Patitas · Ciudad de Guatemala",
+    botones: ["Confirmar", "Reagendar", "Cancelar"],
+  },
+  {
+    id: "w2", nombre: "reactivacion_clinica", categoria: "MARKETING", estado: "Aprobada", actualizada: "28 sep 2026",
+    cuerpo: "Hola {{1}}, en Clínica Veterinaria Patitas nos acordamos de {{2}}. Su última visita fue en {{3}} y queremos ayudarte a mantener su salud al día. ¿Te gustaría agendar una cita de control?",
+    ejemplos: ["Héctor", "Nala", "febrero"],
+    botones: ["Agendar cita", "Ahora no", "No recibir más"],
+  },
+  {
+    id: "w3", nombre: "mascota_lista_grooming", categoria: "UTILITY", estado: "En revisión", actualizada: "Hoy",
+    cuerpo: "¡Hola {{1}}! {{2}} ya está listo después de su {{3}}. Puedes pasar a recogerlo cuando gustes. 🐾",
+    ejemplos: ["Valeria", "Peluche", "baño y corte"],
+    botones: ["Voy en camino"],
+  },
+];

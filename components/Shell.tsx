@@ -12,6 +12,7 @@ import {
   Inbox,
   LogOut,
   Megaphone,
+  MessageSquareText,
   Menu,
   PawPrint,
   Stethoscope,
@@ -41,6 +42,7 @@ const MARKETING: NavItem[] = [
   { href: "/reactivacion", label: "Reactivación", Icon: UserRoundSearch },
   { href: "/seguimiento", label: "Seguimiento", Icon: Stethoscope },
   { href: "/publicaciones", label: "Publicaciones", Icon: Send },
+  { href: "/plantillas", label: "Plantillas WhatsApp", Icon: MessageSquareText },
 ];
 
 const CALENDARIOS: { id: Agenda; label: string }[] = [

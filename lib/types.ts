@@ -244,3 +244,21 @@ export interface Campana {
   destinatarios: number;
   stats?: { entregados: number; leidos: number; respondieron: number; citas: number };
 }
+
+/** Plantilla de WhatsApp que la clínica crea y edita (máximo 5 guardadas). */
+export interface PlantillaWA {
+  id: string;
+  /** Nombre para Meta: minúsculas, números y guion bajo. */
+  nombre: string;
+  categoria: "UTILITY" | "MARKETING";
+  encabezado?: string;
+  /** Texto con variables {{1}}, {{2}}… */
+  cuerpo: string;
+  /** Ejemplos de las variables, en orden (Meta los pide para aprobar). */
+  ejemplos: string[];
+  pie?: string;
+  /** Respuestas rápidas (máximo 3, 25 caracteres cada una). */
+  botones: string[];
+  estado: "Borrador" | "En revisión" | "Aprobada";
+  actualizada: string;
+}
