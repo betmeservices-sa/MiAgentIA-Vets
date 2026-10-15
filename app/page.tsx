@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, BellRing, Bot, CalendarCheck, CalendarPlus, CheckCheck, Info, Moon, PawPrint, Phone, Pill, RotateCcw, Send, ShieldCheck, Sparkles, Stethoscope, UserPlus, UserRound, UserRoundSearch } from "lucide-react";
+import { AlertTriangle, BellRing, Bot, CalendarCheck, CalendarPlus, CheckCheck, Info, Moon, PawPrint, Phone, Pill, RotateCcw, Send, ShieldCheck, Sparkles, Stethoscope, UserPlus, UserRound, UserRoundSearch, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { AGENDA_INFO, etiquetaDia, MOTIVO } from "@/lib/format";
 import { CITAS, cliente, nombreMascota, STAFF } from "@/lib/seed";
@@ -69,7 +69,10 @@ const CANALES: { id: "todos" | Canal; label: string }[] = [
 ];
 
 export default function BandejaPage() {
-  const { conversaciones, filtro, marcarLeida, convSel: sel, setConvSel: setSel } = useStore();
+  const { conversaciones, filtro, marcarLeida, convSel: sel, setConvSel: setSel, convPedida, limpiarConvPedida } = useStore();
+  // Solo en el teléfono: se ve la lista o el chat, no los dos a la vez.
+  const [chatMovil, setChatMovil] = useState(convPedida);
+  useEffect(() => limpiarConvPedida(), [limpiarConvPedida]);
   const [tab, setTab] = useState<Tab>("todas");
   const [canal, setCanal] = useState<"todos" | Canal>("todos");
   const [prio, setPrio] = useState<"todas" | Prioridad>("todas");
@@ -93,7 +96,7 @@ export default function BandejaPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-card px-5 py-3">
+      <header className={cn("flex-wrap items-center justify-between gap-3 border-b border-line bg-card px-5 py-3", chatMovil ? "hidden md:flex" : "flex")}>
         <div>
           <h1 className="text-[20px] font-extrabold tracking-tight">Bandeja omnicanal</h1>
           <p className="text-[12.5px] text-[var(--text-3)]">WhatsApp, Instagram y Facebook en un solo lugar · MIA agenda y reagenda sola en clínica y grooming</p>
@@ -103,7 +106,7 @@ export default function BandejaPage() {
 
       <div className="flex min-h-0 flex-1">
         {/* Lista */}
-        <div className="flex w-full max-w-[360px] shrink-0 flex-col border-r border-line bg-card">
+        <div className={cn("w-full shrink-0 flex-col border-r border-line bg-card md:max-w-[360px]", chatMovil ? "hidden md:flex" : "flex")}>
           <div className="space-y-2.5 border-b border-line p-3">
             <div className="flex gap-1">
               {TABS.map((t) => {
@@ -186,13 +189,13 @@ export default function BandejaPage() {
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {lista.map((c) => (
-              <Item key={c.id} c={c} activa={actual?.id === c.id} onClick={() => { setSel(c.id); marcarLeida(c.id); }} />
+              <Item key={c.id} c={c} activa={actual?.id === c.id} onClick={() => { setSel(c.id); marcarLeida(c.id); setChatMovil(true); }} />
             ))}
             {lista.length === 0 && <p className="p-6 text-center text-sm text-[var(--text-3)]">Sin conversaciones con este filtro.</p>}
           </div>
         </div>
 
-        {actual ? <Hilo c={actual} /> : <div className="flex-1" />}
+        {actual ? <Hilo c={actual} movil={chatMovil} onVolver={() => setChatMovil(false)} /> : <div className="hidden flex-1 md:block" />}
         {actual && <Ficha c={actual} />}
       </div>
     </div>
@@ -270,7 +273,7 @@ function ObjetivoTag({ c }: { c: Conversacion }) {
   );
 }
 
-function Hilo({ c }: { c: Conversacion }) {
+function Hilo({ c, movil, onVolver }: { c: Conversacion; movil: boolean; onVolver: () => void }) {
   const { devolverAIA, resolver, enviar } = useStore();
   const [texto, setTexto] = useState("");
   const fin = useRef<HTMLDivElement>(null);
@@ -281,9 +284,12 @@ function Hilo({ c }: { c: Conversacion }) {
   }, [c.id, c.mensajes.length]);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col bg-surface">
+    <div className={cn("min-w-0 flex-1 flex-col bg-surface", movil ? "flex" : "hidden md:flex")}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-card px-4 py-2.5">
-        <div className="flex min-w-0 items-center gap-2.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-2.5 md:flex-nowrap">
+          <button type="button" onClick={onVolver} className="-ml-1 inline-flex items-center gap-0.5 rounded-lg py-1 pr-1.5 text-[13px] font-semibold text-brand md:hidden">
+            <ChevronLeft size={18} /> Volver
+          </button>
           <p className="truncate font-bold">{c.contacto?.nombre ?? cli.nombre}</p>
           {c.contacto && (
             <span className="inline-flex items-center gap-0.5 rounded-md bg-violet-50 px-1.5 py-0.5 text-[10.5px] font-semibold text-violet-700" title={c.contacto.relacion}>

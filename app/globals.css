@@ -121,3 +121,13 @@ body {
 .prose-doc strong {
   color: var(--text);
 }
+
+/* Teléfono: con letra menor a 16px, iPhone hace zoom al tocar un campo. Solo
+   aplica en pantallas chicas; en computadora los campos quedan igual. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

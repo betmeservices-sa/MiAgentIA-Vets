@@ -134,7 +134,47 @@ export default function PacientesPage() {
             <span className="ml-auto text-[12.5px] text-[var(--text-3)]">{lista.length} {lista.length === 1 ? "paciente" : "pacientes"}</span>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="divide-y divide-line md:hidden">
+            {lista.map(({ c, ultima, proxima, tratamiento, deLuna, porRevisar }) => (
+              <div key={c.id} className={cn("px-3 py-3", porRevisar && "bg-violet-50/40")}>
+                <div className="flex items-start gap-3">
+                  <Link href={`/pacientes/${c.id}`} className="flex min-w-0 flex-1 items-start gap-3">
+                    <Avatar nombre={c.nombre} size={38} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-semibold text-brand">{c.nombre}</span>
+                      <span className="block truncate text-[12.5px] text-[var(--text-2)]">{c.mascotas.map((m) => nombreMascota(m.nombre, c)).join(", ")}</span>
+                      <span className="block truncate text-[12px] text-[var(--text-3)]">{c.telefono}</span>
+                    </span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => abrirChat(c.id)}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-brand/40 bg-brand/5 px-2.5 py-1.5 text-[12px] font-semibold text-brand"
+                  >
+                    <MessageCircle size={13} /> Chat
+                  </button>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-[50px] text-[11.5px]">
+                  <ChannelBadge canal={c.canal} />
+                  {ultima && <span className="text-[var(--text-3)]">Última: {fechaLegible(ultima.fecha)}</span>}
+                  {proxima && (
+                    <span className="text-[var(--text-3)]">
+                      · Próxima: {etiquetaDia(proxima.dia)} {proxima.hora}
+                    </span>
+                  )}
+                  {tratamiento && <span className="rounded bg-emerald-50 px-1 font-semibold text-emerald-700">En tratamiento</span>}
+                  {deLuna && <span className="rounded bg-violet-50 px-1 font-semibold text-violet-700">{porRevisar ? "Por revisar" : "MIA · revisado"}</span>}
+                  {porRevisar && (
+                    <button type="button" onClick={() => setRevisados((x) => new Set(x).add(c.id))} className="font-semibold text-violet-700 underline">
+                      Marcar revisado
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {lista.length === 0 && <p className="p-8 text-center text-[13px] text-[var(--text-3)]">Ningún paciente coincide con la búsqueda.</p>}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[980px] text-left text-[13px]">
               <thead className="bg-surface/70 text-[11px] uppercase tracking-wider text-[var(--text-3)]">
                 <tr>

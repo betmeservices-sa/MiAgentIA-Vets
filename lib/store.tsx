@@ -35,7 +35,11 @@ interface Estado {
   setDiaCalendario: (d: number) => void;
   /** Conversación abierta en la bandeja. */
   convSel: string;
+  /** Elige la conversación abierta; desde otra pantalla también pide abrir el chat en el teléfono. */
   setConvSel: (id: string) => void;
+  /** Otra pantalla pidió abrir una conversación y la bandeja aún no la mostró. */
+  convPedida: boolean;
+  limpiarConvPedida: () => void;
   /** Id de la conversación del cliente; si no tiene, abre una nueva por su canal. */
   conversacionDe: (clienteId: string) => string;
   /** Visitas atendidas (clínica y grooming), incluidas las que se registran al resumir una consulta. */
@@ -81,7 +85,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [conversaciones, setConvs] = useState<Conversacion[]>(CONVERSACIONES);
   const [calendario, setCalendario] = useState<Agenda>("clinica");
   const [diaCalendario, setDiaCalendario] = useState(0);
-  const [convSel, setConvSel] = useState("v3");
+  const [convSel, setConvSelState] = useState("v3");
+  const [convPedida, setConvPedida] = useState(false);
+  const setConvSel = useCallback((id: string) => {
+    setConvSelState(id);
+    setConvPedida(true);
+  }, []);
+  const limpiarConvPedida = useCallback(() => setConvPedida(false), []);
 
   // El filtro se recuerda por navegador: es una preferencia de vista.
   useEffect(() => {
@@ -257,7 +267,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ filtro, setFiltro, conversaciones, tomar, devolverAIA, resolver, enviar, marcarLeida, urgencias, agendarUrgencia, cerrarUrgencia, recetas, agregarReceta, calendario, setCalendario, diaCalendario, setDiaCalendario, convSel, setConvSel, conversacionDe, visitas, resumenes, guardarResumen, notas, agregarNota, agregarCita, citasVersion, posts, agregarPost, campanas, agregarCampana, contactosDe, agregarContacto, plantillas, guardarPlantilla, eliminarPlantilla }}
+      value={{ filtro, setFiltro, conversaciones, tomar, devolverAIA, resolver, enviar, marcarLeida, urgencias, agendarUrgencia, cerrarUrgencia, recetas, agregarReceta, calendario, setCalendario, diaCalendario, setDiaCalendario, convSel, setConvSel, convPedida, limpiarConvPedida, conversacionDe, visitas, resumenes, guardarResumen, notas, agregarNota, agregarCita, citasVersion, posts, agregarPost, campanas, agregarCampana, contactosDe, agregarContacto, plantillas, guardarPlantilla, eliminarPlantilla }}
     >
       {children}
     </Ctx.Provider>

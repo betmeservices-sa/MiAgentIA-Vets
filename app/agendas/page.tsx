@@ -8,10 +8,11 @@ import { citasDe, horario, ocupacion } from "@/lib/agenda";
 import { CALENDARIOS, cliente } from "@/lib/seed";
 import { useStore } from "@/lib/store";
 import { PageHeader } from "@/components/ui";
+import { useEsMovil } from "@/lib/useEsMovil";
 
 const INI = 8 * 60;
 const FIN = 18 * 60;
-const PX = 1.1; // px por minuto
+const PX_PC = 1.1; // px por minuto en computadora
 
 export default function AgendasPage() {
   // El calendario se elige con los botones Veterinaria / Grooming de la barra de arriba.
@@ -25,6 +26,14 @@ export default function AgendasPage() {
   // Lunes de la semana actual como offset en días.
   const lunes = lunesActual + semana * 7;
   const dias = Array.from({ length: 6 }, (_, i) => lunes + i);
+  // En el teléfono se ve un día a la vez; en computadora, la semana completa.
+  const movil = useEsMovil();
+  const [diaMovil, setDiaMovil] = useState<number | null>(null);
+  const diaSel = diaMovil !== null && dias.includes(diaMovil) ? diaMovil : dias.includes(diaCalendario) ? diaCalendario : dias.includes(0) ? 0 : lunes;
+  const visibles = movil ? [diaSel] : dias;
+  const columnas = `56px repeat(${visibles.length}, 1fr)`;
+  // En el teléfono hay un solo día: más alto para que las citas cortas se lean.
+  const PX = movil ? 1.6 : PX_PC;
   const info = AGENDA_INFO[agenda];
   const cal = CALENDARIOS[agenda];
 
@@ -63,11 +72,33 @@ export default function AgendasPage() {
         </div>
       </div>
 
+      {movil && (
+        <div className="flex gap-1 border-b border-line bg-card px-3 py-2">
+          {dias.map((d) => {
+            const c = diaCorto(d);
+            const on = d === diaSel;
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDiaMovil(d)}
+                aria-pressed={on}
+                className={cn("flex flex-1 flex-col items-center rounded-lg py-1.5 text-[11px] font-semibold", on ? "text-white" : d === 0 ? "text-brand" : "text-[var(--text-2)]")}
+                style={on ? { backgroundColor: info.color } : undefined}
+              >
+                <span className="uppercase">{c.nombre}</span>
+                <span className="text-[16px] font-extrabold">{c.num}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="min-h-0 flex-1 overflow-auto p-4">
-        <div className="min-w-[900px] rounded-2xl border border-line bg-card shadow-sm">
-          <div className="grid border-b border-line" style={{ gridTemplateColumns: "56px repeat(6, 1fr)" }}>
+        <div className={cn("rounded-2xl border border-line bg-card shadow-sm", !movil && "min-w-[900px]")}>
+          <div className="grid border-b border-line" style={{ gridTemplateColumns: columnas }}>
             <div />
-            {dias.map((d) => {
+            {visibles.map((d) => {
               const c = diaCorto(d);
               const oc = ocupacion(agenda, d);
               return (
@@ -84,7 +115,7 @@ export default function AgendasPage() {
               );
             })}
           </div>
-          <div className="relative grid" style={{ gridTemplateColumns: "56px repeat(6, 1fr)", height: (FIN - INI) * PX }}>
+          <div className="relative grid" style={{ gridTemplateColumns: columnas, height: (FIN - INI) * PX }}>
             <div className="relative">
               {Array.from({ length: (FIN - INI) / 60 }, (_, i) => (
                 <span key={i} className="absolute right-2 -translate-y-1/2 text-[10.5px] text-[var(--text-3)]" style={{ top: i * 60 * PX }}>
@@ -92,7 +123,7 @@ export default function AgendasPage() {
                 </span>
               ))}
             </div>
-            {dias.map((d) => {
+            {visibles.map((d) => {
               const h = horario(agenda, d);
               return (
                 <div key={d} className="relative border-l border-line">
