@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, BellRing, Bot, CalendarCheck, CalendarPlus, CheckCheck, Info, Moon, PawPrint, Phone, Pill, RotateCcw, Send, ShieldCheck, Sparkles, Stethoscope, UserPlus, UserRound, UserRoundSearch, ChevronLeft } from "lucide-react";
+import { AlertTriangle, BellRing, Bot, CalendarCheck, CalendarPlus, CheckCheck, Info, Moon, PawPrint, Phone, Pill, RotateCcw, Send, ShieldCheck, Sparkles, Stethoscope, UserPlus, UserRound, UserRoundSearch, ChevronLeft, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { AGENDA_INFO, etiquetaDia, MOTIVO } from "@/lib/format";
 import { CITAS, cliente, nombreMascota, STAFF } from "@/lib/seed";
@@ -196,7 +196,7 @@ export default function BandejaPage() {
         </div>
 
         {actual ? <Hilo c={actual} movil={chatMovil} onVolver={() => setChatMovil(false)} /> : <div className="hidden flex-1 md:block" />}
-        {actual && <Ficha c={actual} />}
+        {actual && <Ficha key={actual.id} c={actual} />}
       </div>
     </div>
   );
@@ -394,6 +394,8 @@ function Hilo({ c, movil, onVolver }: { c: Conversacion; movil: boolean; onVolve
 function Ficha({ c }: { c: Conversacion }) {
   const cli = cliente(c.clienteId);
   const { contactosDe } = useStore();
+  // El historial de citas va cerrado; se abre al tocarlo.
+  const [historial, setHistorial] = useState(false);
   const citas = CITAS.filter((x) => x.clienteId === cli.id).sort((a, b) => b.dia - a.dia).slice(0, 6);
   return (
     <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-l border-line bg-card p-4 xl:block">
@@ -446,20 +448,19 @@ function Ficha({ c }: { c: Conversacion }) {
         ))}
       </div>
 
-      <h3 className="mt-5 mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-3)]">Última visita</h3>
-      <div className="grid grid-cols-2 gap-2 text-[12px]">
-        <div className="rounded-xl p-2.5" style={{ backgroundColor: "var(--clinica-soft)" }}>
-          <p className="font-bold" style={{ color: "var(--clinica)" }}>Clínica</p>
-          <p className="text-[var(--text-2)]">{cli.ultimaClinica ?? "Sin visitas"}</p>
-        </div>
-        <div className="rounded-xl p-2.5" style={{ backgroundColor: "var(--grooming-soft)" }}>
-          <p className="font-bold" style={{ color: "var(--grooming)" }}>Grooming</p>
-          <p className="text-[var(--text-2)]">{cli.ultimaGrooming ?? "Sin visitas"}</p>
-        </div>
-      </div>
-
-      <h3 className="mt-5 mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-3)]">Historial de citas</h3>
-      <div className="space-y-1.5">
+      <button
+        type="button"
+        onClick={() => setHistorial((h) => !h)}
+        aria-expanded={historial}
+        className="mt-5 flex w-full items-center justify-between rounded-xl border border-line px-3 py-2.5 text-left hover:bg-surface"
+      >
+        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-3)]">
+          Historial de citas <span className="ml-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-[10.5px] text-[var(--text-2)]">{citas.length}</span>
+        </span>
+        <ChevronDown size={16} className={cn("text-[var(--text-3)] transition", historial && "rotate-180")} />
+      </button>
+      {historial && (
+      <div className="mt-2 space-y-1.5">
         {citas.length === 0 && <p className="text-[12px] text-[var(--text-3)]">Sin citas registradas.</p>}
         {citas.map((x) => (
           <div key={x.id} className="rounded-lg border border-line px-2.5 py-2 text-[12px]">
@@ -472,6 +473,7 @@ function Ficha({ c }: { c: Conversacion }) {
           </div>
         ))}
       </div>
+      )}
 
       <p className="mt-5 flex items-start gap-1.5 rounded-xl bg-surface p-2.5 text-[11px] leading-snug text-[var(--text-3)]">
         <ShieldCheck size={13} className="mt-0.5 shrink-0" />
