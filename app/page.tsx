@@ -8,6 +8,8 @@ import { CITAS, cliente, nombreMascota, STAFF } from "@/lib/seed";
 import { pasaFiltro, useStore } from "@/lib/store";
 import type { Canal, Conversacion, Objetivo } from "@/lib/types";
 import { AgendaPill, Avatar, ChannelBadge, EstadoCitaPill, FiltroAgendaToggle } from "@/components/ui";
+import { FichaReal, HiloReal, ItemReal } from "@/components/BandejaReal";
+import { useWhatsappReal, type ChatReal } from "@/lib/useWhatsappReal";
 
 // La bandeja no reparte clientes entre personas: MIA atiende todo, agenda y
 // reagenda sola. Las pestañas separan la reactivación y lo urgente que MIA
@@ -61,6 +63,10 @@ const RESULTADO = {
   sin_interes: "bg-slate-100 text-slate-600 ring-slate-300/60",
 } as const;
 
+// En la lista conviven las conversaciones de la demostración y los chats del
+// número real de la clínica (estos van arriba).
+type Entrada = { real: false; id: string; c: Conversacion } | { real: true; id: string; chat: ChatReal };
+
 const CANALES: { id: "todos" | Canal; label: string }[] = [
   { id: "todos", label: "Todos" },
   { id: "whatsapp", label: "WhatsApp" },
@@ -76,20 +82,26 @@ export default function BandejaPage() {
   const [tab, setTab] = useState<Tab>("todas");
   const [canal, setCanal] = useState<"todos" | Canal>("todos");
   const [prio, setPrio] = useState<"todas" | Prioridad>("todas");
+  const wa = useWhatsappReal();
 
   // Cada filtro cuenta con los demás aplicados, para que los números cuadren.
   const enAgenda = useMemo(() => conversaciones.filter((c) => pasaFiltro(filtro, c.agenda) || c.agenda === null), [conversaciones, filtro]);
   const pasaCanal = (c: Conversacion, k = canal) => k === "todos" || c.canal === k;
   const pasaPrio = (c: Conversacion, p = prio) => p === "todas" || prioridad(c) === p;
+  // Los chats reales son de WhatsApp, prioridad media (los atiende la clínica) y solo salen en "Todas".
+  const realesPasan = (t = tab, k = canal, p = prio) => t === "todas" && (k === "todos" || k === "whatsapp") && (p === "todas" || p === "media");
+  const nReales = (t = tab, k = canal, p = prio) => (realesPasan(t, k, p) ? wa.chats.length : 0);
 
-  const lista = useMemo(() => {
+  const lista = useMemo<Entrada[]>(() => {
     const orden: Record<Prioridad, number> = { alta: 0, media: 1, baja: 2 };
     const urgenciaPrimero = (c: Conversacion) => (c.motivo === "urgencia" && c.estado === "transferida" ? -1 : 0);
-    return enAgenda
+    const demo = enAgenda
       .filter((c) => enTab(c, tab) && pasaCanal(c) && pasaPrio(c))
       .sort((a, b) => urgenciaPrimero(a) - urgenciaPrimero(b) || orden[prioridad(a)] - orden[prioridad(b)] || Number(a.estado === "resuelta") - Number(b.estado === "resuelta"));
+    const reales = realesPasan() ? wa.chats : [];
+    return [...reales.map((chat) => ({ real: true as const, id: chat.id, chat })), ...demo.map((c) => ({ real: false as const, id: c.id, c }))];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enAgenda, tab, canal, prio]);
+  }, [enAgenda, tab, canal, prio, wa.chats]);
 
   // Si los filtros dejan fuera la conversación abierta, se muestra la primera de la lista.
   const actual = lista.find((c) => c.id === sel) ?? lista[0];
@@ -101,8 +113,16 @@ export default function BandejaPage() {
           <h1 className="text-[20px] font-extrabold tracking-tight">Bandeja omnicanal</h1>
           <p className="text-[12.5px] text-[var(--text-3)]">WhatsApp, Instagram y Facebook en un solo lugar · MIA agenda y reagenda sola en clínica y grooming</p>
         </div>
-        <FiltroAgendaToggle />
+        <div className="flex flex-wrap items-center gap-2">
+          {wa.numero && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[12px] font-semibold text-emerald-700" title={`WhatsApp de la clínica conectado: ${wa.numero.nombre}`}>
+              <span className="h-2 w-2 rounded-full bg-emerald-500" /> WhatsApp {wa.numero.telefono}
+            </span>
+          )}
+          <FiltroAgendaToggle />
+        </div>
       </header>
+      {wa.error && <p className="border-b border-rose-200 bg-rose-50 px-5 py-1.5 text-[12px] font-semibold text-rose-800">WhatsApp: {wa.error}</p>}
 
       <div className="flex min-h-0 flex-1">
         {/* Lista */}
@@ -135,7 +155,7 @@ export default function BandejaPage() {
               <div className="grid grid-cols-4 gap-1">
                 {CANALES.map((k) => {
                   const on = canal === k.id;
-                  const n = enAgenda.filter((c) => enTab(c, tab) && pasaCanal(c, k.id) && pasaPrio(c)).length;
+                  const n = enAgenda.filter((c) => enTab(c, tab) && pasaCanal(c, k.id) && pasaPrio(c)).length + nReales(tab, k.id, prio);
                   return (
                     <button
                       key={k.id}
@@ -161,7 +181,7 @@ export default function BandejaPage() {
               <span className="mr-0.5 text-[var(--text-3)]">Prioridad</span>
               {(["alta", "media", "baja"] as const).map((p) => {
                 const on = prio === p;
-                const n = enAgenda.filter((c) => enTab(c, tab) && pasaCanal(c) && pasaPrio(c, p)).length;
+                const n = enAgenda.filter((c) => enTab(c, tab) && pasaCanal(c) && pasaPrio(c, p)).length + nReales(tab, canal, p);
                 return (
                   <button
                     key={p}
@@ -188,15 +208,25 @@ export default function BandejaPage() {
             </div>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {lista.map((c) => (
-              <Item key={c.id} c={c} activa={actual?.id === c.id} onClick={() => { setSel(c.id); marcarLeida(c.id); setChatMovil(true); }} />
-            ))}
+            {lista.map((e) =>
+              e.real ? (
+                <ItemReal key={e.id} c={e.chat} activa={actual?.id === e.id} noLeidos={wa.noLeidos(e.chat)} onClick={() => { setSel(e.id); wa.marcarVisto(e.chat); setChatMovil(true); }} />
+              ) : (
+                <Item key={e.id} c={e.c} activa={actual?.id === e.id} onClick={() => { setSel(e.id); marcarLeida(e.id); setChatMovil(true); }} />
+              ),
+            )}
             {lista.length === 0 && <p className="p-6 text-center text-sm text-[var(--text-3)]">Sin conversaciones con este filtro.</p>}
           </div>
         </div>
 
-        {actual ? <Hilo c={actual} movil={chatMovil} onVolver={() => setChatMovil(false)} /> : <div className="hidden flex-1 md:block" />}
-        {actual && <Ficha key={actual.id} c={actual} />}
+        {!actual ? (
+          <div className="hidden flex-1 md:block" />
+        ) : actual.real ? (
+          <HiloReal key={`hilo-${actual.id}`} c={actual.chat} movil={chatMovil} onVolver={() => setChatMovil(false)} onVisto={wa.marcarVisto} enviar={wa.enviar} />
+        ) : (
+          <Hilo c={actual.c} movil={chatMovil} onVolver={() => setChatMovil(false)} />
+        )}
+        {actual && (actual.real ? <FichaReal key={actual.id} c={actual.chat} /> : <Ficha key={actual.id} c={actual.c} />)}
       </div>
     </div>
   );

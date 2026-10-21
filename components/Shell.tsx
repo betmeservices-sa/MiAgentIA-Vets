@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -29,13 +29,11 @@ import { CITAS, CLINICA, cliente } from "@/lib/seed";
 import { StoreProvider, useStore } from "@/lib/store";
 import type { Agenda } from "@/lib/types";
 import { Avatar } from "./ui";
-import { WhatsappIcon } from "./glifos";
 
 interface NavItem {
   href: string;
   label: string;
-  // Los glifos de marca (WhatsApp) no reciben strokeWidth, por eso no es solo LucideIcon.
-  Icon: LucideIcon | ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  Icon: LucideIcon;
 }
 
 // Menú lateral: bandeja, marketing (agrupado), pacientes y dashboard. Calendarios y
@@ -310,7 +308,6 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
 
       <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
         <NavLink href="/" label="Bandeja" Icon={Inbox} activo={activo(pathname, "/")} aviso={transferidas} onClick={onClose} />
-        <NavLink href="/whatsapp" label="WhatsApp" Icon={WhatsappIcon} activo={activo(pathname, "/whatsapp")} onClick={onClose} />
         <NavLink href="/recordatorios" label="Recordatorios" Icon={BellRing} activo={activo(pathname, "/recordatorios")} aviso={porConfirmar} avisoColor="#f59e0b" onClick={onClose} />
 
         <button

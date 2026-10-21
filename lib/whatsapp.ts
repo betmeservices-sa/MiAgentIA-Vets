@@ -130,11 +130,17 @@ async function graph<T>(ruta: string, init: RequestInit = {}): Promise<T> {
   return datos;
 }
 
+// La bandeja sondea cada pocos segundos; los datos del número casi no cambian.
+let numeroEnCache: { valor: NumeroWA; hasta: number } | null = null;
+
 export async function datosNumero(): Promise<NumeroWA> {
+  if (numeroEnCache && numeroEnCache.hasta > Date.now()) return numeroEnCache.valor;
   const d = await graph<{ display_phone_number: string; verified_name: string; quality_rating?: string; name_status?: string }>(
     `${env().phoneId}?fields=display_phone_number,verified_name,quality_rating,name_status`,
   );
-  return { telefono: d.display_phone_number, nombre: d.verified_name, calidad: d.quality_rating ?? null, estadoNombre: d.name_status ?? null };
+  const valor = { telefono: d.display_phone_number, nombre: d.verified_name, calidad: d.quality_rating ?? null, estadoNombre: d.name_status ?? null };
+  numeroEnCache = { valor, hasta: Date.now() + 5 * 60 * 1000 };
+  return valor;
 }
 
 /** Envía texto libre (solo vale dentro de las 24 h desde el último mensaje del cliente). */
