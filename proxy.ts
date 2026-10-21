@@ -4,7 +4,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { COOKIE, sesionValida } from "@/lib/session";
 
-const PUBLICAS = ["/login", "/api/login", "/api/logout"];
+// El webhook de WhatsApp lo llama Meta sin sesión: lo protege la firma de la app.
+const PUBLICAS = ["/login", "/api/login", "/api/logout", "/api/whatsapp/webhook"];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
